@@ -3,7 +3,6 @@
 from replex.providers.anthropic import AnthropicNormaliser
 from replex.providers.base import (
     Normaliser,
-    RawNormaliser,
     build_trace,
     detect_provider,
     normaliser_for,
@@ -11,6 +10,7 @@ from replex.providers.base import (
     unregister_normaliser,
 )
 from replex.providers.openai_compat import OpenAICompatNormaliser
+from replex.providers.raw import RawNormaliser
 
 register_normaliser(AnthropicNormaliser(), first=False)
 register_normaliser(OpenAICompatNormaliser(), first=False)

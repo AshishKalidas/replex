@@ -187,7 +187,7 @@ def _check_sequence(base: Trace, cand: Trace, checks: Checks) -> list[Finding]:
 
 def _numbers_close(x: Any, y: Any, tolerance: float) -> bool:
     if isinstance(x, bool) or isinstance(y, bool):
-        return bool(x == y)
+        return type(x) is type(y) and x == y
     if isinstance(x, (int, float)) and isinstance(y, (int, float)):
         return math.isclose(x, y, rel_tol=0.0, abs_tol=tolerance)
     if isinstance(x, dict) and isinstance(y, dict):

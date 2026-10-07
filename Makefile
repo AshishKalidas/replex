@@ -13,7 +13,8 @@ install: ## Install replex in editable mode with dev extras
 	$(PY) -m pip install -e ".[dev]"
 
 test: ## Run the full test suite with coverage (gate: 90%)
-	$(PY) -m pytest -q --cov=replex --cov-report=term-missing --cov-fail-under=90
+	$(PY) -m coverage run -m pytest -q
+	$(PY) -m coverage report --fail-under=90
 	cd $(EXAMPLE) && $(PY) -m pytest -q
 
 test-fast: ## Run the test suite in parallel without coverage
