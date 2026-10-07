@@ -187,8 +187,7 @@ def build_trace(cassette: Cassette) -> Trace:
     executed = any(isinstance(s, ToolStep) for s in steps)
     if not executed and any(m.tool_requests for m in models):
         notes.append(
-            "No @replex.tool calls were recorded; tool names come from the model's "
-            "tool requests."
+            "No @replex.tool calls were recorded; tool names come from the model's tool requests."
         )
     usage = Usage()
     for m in models:

@@ -108,13 +108,20 @@ class CaptureContext:
 
     mode: CaptureMode
     http: HttpSettings = field(default_factory=HttpSettings)
-    tools_mode: ToolsMode = "live"
+    tools_mode: ToolsMode | None = None
     redactor: Redactor = field(default_factory=Redactor)
     baseline: Cassette | None = None
     cassette_label: str = "<cassette>"
     stats: dict[str, int] = field(default_factory=lambda: {"tool_executions": 0})
 
     def __post_init__(self) -> None:
+        if self.tools_mode is None:
+            # replay serves recorded results; drift (record + baseline) replays what it can
+            # and runs safe tools; plain recording runs everything live.
+            if self.mode == "replay":
+                self.tools_mode = "replay"
+            else:
+                self.tools_mode = "auto" if self.baseline is not None else "live"
         self.lock = threading.RLock()
         self.events: list[Event | _Pending] = []
         self.open_streams: list[Callable[[], None]] = []

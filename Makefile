@@ -47,7 +47,7 @@ redact-check: ## Scan every committed cassette for secrets / personal data
 	$(PY) -m replex.cli redact --check tests/cassettes
 
 bench: ## Measure decorated-tool overhead outside a session
-	$(PY) -m pytest -q tests/test_benchmark.py -s -m slow
+	$(PY) -m pytest -q tests/test_benchmark.py -s
 
 record-claude: ## Record REAL cassettes from Claude Sonnet 5.5 (needs ANTHROPIC_API_KEY)
 	cd $(EXAMPLE) && $(PY) record_live.py claude
