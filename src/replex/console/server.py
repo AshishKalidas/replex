@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import threading
 import webbrowser
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
@@ -16,6 +17,7 @@ from typing import Any, Literal
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from replex._version import __version__
 from replex.cassette.model import Cassette
@@ -27,13 +29,15 @@ from replex.cassette.storage import (
     sanitise_name,
 )
 from replex.drift.compare import DriftReport, compare
-from replex.drift.diff import diff
 from replex.drift.policy import Policy, load_policy
 from replex.errors import ReplexError
 from replex.providers import build_trace
 from replex.trace.model import Trace
 
 STATIC = Path(__file__).parent / "static"
+# Requests must name the console by a loopback host. Without this check a web page could use
+# DNS rebinding to point its own hostname at 127.0.0.1 and read the cassettes.
+LOCAL_HOSTS = ("127.0.0.1", "localhost", "::1", "[::1]")
 Kind = Literal["baseline", "candidate"]
 CSP = (
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
@@ -41,12 +45,17 @@ CSP = (
 )
 
 
+def _mtime(path: Path | None) -> float | None:
+    return path.stat().st_mtime if path is not None and path.is_file() else None
+
+
 @dataclass
 class _Store:
     baseline_dir: Path
     candidate_dir: Path
     policy_path: Path | None
-    _cache: dict[tuple[str, float], Any] = field(default_factory=dict)
+    # key -> (version stamp, value). One entry per key: a new stamp replaces the old value.
+    _cache: dict[str, tuple[Any, Any]] = field(default_factory=dict)
 
     def directory(self, kind: str) -> Path:
         if kind == "baseline":
@@ -67,39 +76,45 @@ class _Store:
             raise HTTPException(404, f"no {kind} cassette named {name!r}")
         return p
 
-    def _cached(self, key: str, path: Path, build: Any) -> Any:
-        stamp = (key, path.stat().st_mtime)
-        if stamp not in self._cache:
-            self._cache[stamp] = build()
-        return self._cache[stamp]
+    def _cached(self, key: str, stamp: Any, build: Callable[[], Any]) -> Any:
+        hit = self._cache.get(key)
+        if hit is not None and hit[0] == stamp:
+            return hit[1]
+        value = build()
+        self._cache[key] = (stamp, value)
+        return value
 
     def cassette(self, kind: str, name: str) -> Cassette:
         p = self.path(kind, name)
         try:
-            result: Cassette = self._cached(f"c:{p}", p, lambda: load(p))
+            result: Cassette = self._cached(f"cassette:{p}", _mtime(p), lambda: load(p))
         except ReplexError as exc:
             raise HTTPException(422, str(exc)) from exc
         return result
 
     def trace(self, kind: str, name: str) -> Trace:
         p = self.path(kind, name)
-        result: Trace = self._cached(f"t:{p}", p, lambda: build_trace(self.cassette(kind, name)))
+        result: Trace = self._cached(
+            f"trace:{p}", _mtime(p), lambda: build_trace(self.cassette(kind, name))
+        )
         return result
 
     def policy(self) -> Policy:
-        if self.policy_path and self.policy_path.is_file():
-            return load_policy(self.policy_path)
-        return Policy()
+        result: Policy = self._cached(
+            "policy",
+            _mtime(self.policy_path),
+            lambda: load_policy(self.policy_path) if _mtime(self.policy_path) else Policy(),
+        )
+        return result
 
     def drift(self, name: str) -> DriftReport | None:
         try:
             base, cand = self.path("baseline", name), self.path("candidate", name)
         except HTTPException:
             return None
-        key = f"d:{name}:{cand.stat().st_mtime}"
         report: DriftReport = self._cached(
-            key,
-            base,
+            f"drift:{name}",
+            (_mtime(base), _mtime(cand), _mtime(self.policy_path)),
             lambda: compare(
                 self.trace("baseline", name),
                 self.trace("candidate", name),
@@ -141,12 +156,23 @@ def _split(run_id: str) -> tuple[str, str]:
     return kind, name
 
 
-def create_app(baseline_dir: Path, candidate_dir: Path, policy_path: Path | None = None) -> FastAPI:
-    """Build the console application."""
+def create_app(
+    baseline_dir: Path,
+    candidate_dir: Path,
+    policy_path: Path | None = None,
+    *,
+    allowed_hosts: Sequence[str] = LOCAL_HOSTS,
+) -> FastAPI:
+    """Build the console application.
+
+    Args:
+        allowed_hosts: Host header values the console answers to (``*`` disables the check).
+    """
     store = _Store(Path(baseline_dir), Path(candidate_dir), policy_path)
     app = FastAPI(
         title="RepleX console", version=__version__, docs_url=None, redoc_url=None, openapi_url=None
     )
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(allowed_hosts))
 
     @app.middleware("http")
     async def security_headers(request: Any, call_next: Any) -> Response:
@@ -190,7 +216,7 @@ def create_app(baseline_dir: Path, candidate_dir: Path, policy_path: Path | None
         return {
             "a": ta.model_dump(mode="json"),
             "b": tb.model_dump(mode="json"),
-            "diff": diff(ta, tb).model_dump(mode="json"),
+            "diff": report.diff.model_dump(mode="json"),
             "report": report.to_dict(),
         }
 
@@ -250,8 +276,11 @@ def serve(
     print(f"RepleX console: {url}  (baselines: {baseline_dir}, candidates: {candidate_dir})")
     if open_browser:
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
+    hosts = list(LOCAL_HOSTS)
+    if host not in ("0.0.0.0", "::", *LOCAL_HOSTS):
+        hosts.append(host)
     uvicorn.run(
-        create_app(baseline_dir, candidate_dir, policy_path),
+        create_app(baseline_dir, candidate_dir, policy_path, allowed_hosts=hosts),
         host=host,
         port=port,
         log_level="warning",

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import time
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +20,8 @@ fastapi = pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient  # noqa: E402
 
 from replex.console.server import STATIC, create_app  # noqa: E402
+
+LOCAL = "http://127.0.0.1:8765"
 
 STATIC_BUILT = (STATIC / "index.html").is_file() and (STATIC / "assets" / "app.js").is_file()
 
@@ -69,7 +73,7 @@ def dirs(tmp_path: Path) -> tuple[Path, Path]:
 
 @pytest.fixture
 def client(dirs: tuple[Path, Path]) -> TestClient:
-    return TestClient(create_app(dirs[0], dirs[1], None))
+    return TestClient(create_app(dirs[0], dirs[1], None), base_url=LOCAL)
 
 
 def test_runs_and_drift_status(client: TestClient) -> None:
@@ -145,9 +149,32 @@ def test_security_headers_and_index(client: TestClient) -> None:
 def test_policy_file_is_used(dirs: tuple[Path, Path], tmp_path: Path) -> None:
     pol = tmp_path / "strict.yaml"
     pol.write_text("version: 1\ndefaults:\n  final_output: {mode: exact, severity: fail}\n")
-    c = TestClient(create_app(dirs[0], dirs[1], pol))
+    c = TestClient(create_app(dirs[0], dirs[1], pol), base_url=LOCAL)
     assert c.get("/api/drift/order").json()["report"]["passed"] is False
     assert c.get("/api/runs").json()["runs"][0]["drift"] == "failed"
+
+
+def test_policy_edits_apply_without_restart(dirs: tuple[Path, Path], tmp_path: Path) -> None:
+    pol = tmp_path / "policy.yaml"
+    pol.write_text("version: 1\ndefaults:\n  final_output: {mode: exact, severity: fail}\n")
+    c = TestClient(create_app(dirs[0], dirs[1], pol), base_url=LOCAL)
+    assert c.get("/api/drift/order").json()["report"]["passed"] is False
+    pol.write_text("version: 1\ndefaults:\n  final_output: {mode: ignore}\n")
+    os.utime(pol, (time.time() + 5, time.time() + 5))  # coarse mtime clocks
+    assert c.get("/api/drift/order").json()["report"]["passed"] is True
+
+
+@pytest.mark.parametrize("host", ["evil.example.com", "testserver"])
+def test_foreign_host_headers_are_refused(dirs: tuple[Path, Path], host: str) -> None:
+    """DNS rebinding: a page on another origin resolving to 127.0.0.1 gets nothing."""
+    c = TestClient(create_app(dirs[0], dirs[1], None), base_url=f"http://{host}")
+    assert c.get("/api/runs").status_code == 400
+    assert (
+        TestClient(create_app(dirs[0], dirs[1], None), base_url="http://localhost:8765")
+        .get("/api/runs")
+        .status_code
+        == 200
+    )
 
 
 # ------------------------------------------------------------------ single-file HTML report

@@ -57,8 +57,8 @@ replex = "replex.cli:main"
 replex = "replex.pytest_plugin"
 
 [project.urls]
-Documentation = "https://github.com/ashishkalidas/replex/tree/main/docs"
-Source = "https://github.com/ashishkalidas/replex"
+Documentation = "https://github.com/AshishKalidas/replex/tree/main/docs"
+Source = "https://github.com/AshishKalidas/replex"
 
 [tool.hatch.build]
 exclude = ["**/._*", "**/.DS_Store"]

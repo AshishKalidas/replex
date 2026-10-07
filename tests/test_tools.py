@@ -7,6 +7,7 @@ import dataclasses
 import datetime as dt
 import enum
 import json
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -199,6 +200,7 @@ def test_replay_reraises_recorded_exceptions() -> None:
         ("ValueError", ValueError),
         ("no.such.module.Error", ReplayedToolError),
         ("builtins.len", ReplayedToolError),
+        ("json.JSONDecodeError", ReplayedToolError),  # needs more than a message
     ],
 )
 def test_exception_rebuild(type_name: str, expected: type[BaseException]) -> None:
@@ -217,6 +219,33 @@ def test_exception_rebuild(type_name: str, expected: type[BaseException]) -> Non
     )
     with pytest.raises(expected, match="boom"):
         replay(c, lambda: get_order("1"))
+
+
+def test_exception_rebuild_never_imports_modules(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A cassette is data: naming a module in an error type must not import it."""
+    (tmp_path / "replex_side_effect.py").write_text(
+        "import pathlib\npathlib.Path(__file__).with_name('imported').touch()\n"
+        "class Boom(Exception):\n    pass\n"
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    c = Cassette(
+        name="t",
+        created_at="t",
+        replex_version="0",
+        events=[
+            ToolCallEvent(
+                index=0,
+                name="get_order",
+                args={"order_id": "1", "verbose": False},
+                error=ToolError(type="replex_side_effect.Boom", message="boom"),
+            )
+        ],
+    )
+    with pytest.raises(ReplayedToolError, match="boom"):
+        replay(c, lambda: get_order("1"))
+    assert not (tmp_path / "imported").exists()
 
 
 def test_unrecorded_call_in_replay_mode() -> None:

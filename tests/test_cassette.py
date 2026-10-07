@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import stat
+import sys
 from pathlib import Path
 
 import pytest
@@ -124,6 +126,15 @@ def test_missing_file(tmp_path: Path) -> None:
 def test_atomic_write_leaves_no_temp_files(tmp_path: Path) -> None:
     atomic_write_text(tmp_path / "sub" / "f.txt", "hello")
     assert [p.name for p in (tmp_path / "sub").iterdir()] == ["f.txt"]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX permissions")
+def test_atomic_write_uses_normal_file_permissions(tmp_path: Path) -> None:
+    """mkstemp creates 0600 files; written cassettes must be readable like any other file."""
+    reference = tmp_path / "plain.txt"
+    reference.write_text("x")
+    written = atomic_write_text(tmp_path / "f.replex.json", "{}")
+    assert stat.S_IMODE(written.stat().st_mode) == stat.S_IMODE(reference.stat().st_mode)
 
 
 def test_atomic_write_cleans_up_on_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

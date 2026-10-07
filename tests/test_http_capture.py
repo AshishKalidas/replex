@@ -441,6 +441,24 @@ def test_patch_removed_after_exception() -> None:
     assert _runtime.active_capture() is None
 
 
+def test_patch_wraps_and_restores_a_third_party_patch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Instrumentation libraries patch httpx too: theirs must run under ours and survive."""
+    calls: list[str] = []
+    original = httpx.HTTPTransport.handle_request
+
+    def instrumented(self: httpx.HTTPTransport, request: httpx.Request) -> httpx.Response:
+        calls.append(str(request.url))
+        return original(self, request)
+
+    monkeypatch.setattr(httpx.HTTPTransport, "handle_request", instrumented)
+    with capturing(CaptureContext(mode="record", http=INTERCEPT)):
+        assert httpx.HTTPTransport.handle_request is not instrumented
+        with pytest.raises(httpx.ConnectError), httpx.Client() as c:
+            c.get("http://127.0.0.1:9/")
+    assert calls == ["http://127.0.0.1:9/"]
+    assert httpx.HTTPTransport.handle_request is instrumented
+
+
 def test_sessions_do_not_nest() -> None:
     with capturing(CaptureContext(mode="record")):
         with pytest.raises(SessionActive), capturing(CaptureContext(mode="record")):

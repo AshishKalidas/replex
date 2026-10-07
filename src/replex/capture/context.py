@@ -355,6 +355,11 @@ class CaptureContext:
             )
 
     # ------------------------------------------------------------- tools
+    def count_tool_execution(self) -> None:
+        """Note that a tool ran live rather than being replayed."""
+        with self.lock:
+            self.stats["tool_executions"] += 1
+
     def find_tool(self, name: str, args: dict[str, Any]) -> ToolCallEvent | None:
         """The first unused recorded call with this name and (redacted) arguments."""
         if self.baseline is None:

@@ -11,9 +11,9 @@ import dataclasses
 import datetime as _dt
 import enum
 import functools
-import importlib
 import inspect
 import math
+import sys
 import time
 import typing
 from collections.abc import Callable, Iterable, Mapping
@@ -191,15 +191,20 @@ def _make_spec(fn: Callable[..., Any], name: str | None, safe: bool) -> ToolSpec
 
 
 def _rebuild_exception(error: ToolError) -> BaseException:
-    module, _, qualname = error.type.rpartition(".")
-    try:
-        obj: Any = importlib.import_module(module or "builtins")
-        for part in qualname.split("."):
-            obj = getattr(obj, part)
-        if isinstance(obj, type) and issubclass(obj, Exception):
+    """The recorded exception as its original type, else a :class:`ReplayedToolError`.
+
+    Only modules that are already imported are consulted: a cassette is data, and replaying
+    one must never import code it names.
+    """
+    module_name, _, qualname = error.type.rpartition(".")
+    obj: Any = sys.modules.get(module_name or "builtins")
+    for part in qualname.split("."):
+        obj = getattr(obj, part, None)
+    if isinstance(obj, type) and issubclass(obj, Exception):
+        try:
             return obj(error.message)
-    except Exception:
-        pass
+        except Exception:  # the type needs more than a message to construct
+            pass
     return ReplayedToolError(error.type, error.message)
 
 
@@ -265,17 +270,30 @@ def _file(
     ctx.append(make)
 
 
-def _call_sync(
+def _begin(
     spec: ToolSpec, ctx: CaptureContext, args: tuple[Any, ...], kwargs: dict[str, Any]
-) -> Any:
+) -> tuple[dict[str, Any] | None, ToolCallEvent | None]:
+    """Bind the call's arguments and find the recording to replay, if any.
+
+    Returns ``(None, None)`` when the arguments do not fit the signature: the real call then
+    raises the ``TypeError`` itself.
+    """
     try:
         named = spec.bind(args, kwargs)
     except TypeError:
+        return None, None
+    return named, _lookup(spec, ctx, named)
+
+
+def _call_sync(
+    spec: ToolSpec, ctx: CaptureContext, args: tuple[Any, ...], kwargs: dict[str, Any]
+) -> Any:
+    named, recorded = _begin(spec, ctx, args, kwargs)
+    if named is None:
         return spec.fn(*args, **kwargs)
-    recorded = _lookup(spec, ctx, named)
     if recorded is not None:
         return _replay(spec, ctx, recorded)
-    ctx.stats["tool_executions"] += 1
+    ctx.count_tool_execution()
     start = time.perf_counter()
     try:
         result = spec.fn(*args, **kwargs)
@@ -289,14 +307,12 @@ def _call_sync(
 async def _call_async(
     spec: ToolSpec, ctx: CaptureContext, args: tuple[Any, ...], kwargs: dict[str, Any]
 ) -> Any:
-    try:
-        named = spec.bind(args, kwargs)
-    except TypeError:
+    named, recorded = _begin(spec, ctx, args, kwargs)
+    if named is None:
         return await spec.fn(*args, **kwargs)
-    recorded = _lookup(spec, ctx, named)
     if recorded is not None:
         return _replay(spec, ctx, recorded)
-    ctx.stats["tool_executions"] += 1
+    ctx.count_tool_execution()
     start = time.perf_counter()
     try:
         result = await spec.fn(*args, **kwargs)

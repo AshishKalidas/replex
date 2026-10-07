@@ -1,6 +1,6 @@
 # Decisions
 
-Choices the specification left open, one line each: decision, reason.
+Design choices worth knowing about, one line each: decision, reason.
 
 ## Capture and replay
 
@@ -13,7 +13,7 @@ Choices the specification left open, one line each: decision, reason.
 - **Hosts not in `intercept_hosts` pass through untouched while recording, and are blocked in replay unless in `passthrough_hosts`.** Recording should not change behaviour; replay must not touch the network.
 - **Tool arguments are bound to parameter names (defaults applied) before recording.** `get_order("1")` and `get_order(order_id="1")` are the same call.
 - **On replay, a tool's return annotation is used to rebuild Pydantic models and dataclasses.** Agents get back the type they returned when recording.
-- **A recorded tool exception is re-raised as its original type when importable, else as `ReplayedToolError`.** Agent code that catches specific exceptions keeps working.
+- **A recorded tool exception is re-raised as its original type when that type is already imported, else as `ReplayedToolError`.** Agent code that catches specific exceptions keeps working, and a cassette can never cause an import.
 - **`record` keeps a cassette even if the test raised, noting the error in `meta.error`; `rewrite` and `drift` do not replace a baseline from a crashed run.** A failed first recording is still worth inspecting; an existing baseline must never be replaced by a crash.
 - **The mock provider uses a fixed `created` timestamp and deterministic ids.** Recording the same scenario twice gives byte-identical cassettes.
 
@@ -34,7 +34,7 @@ Choices the specification left open, one line each: decision, reason.
 - **`tool_args` compares executed tool steps; it falls back to the model's tool requests only when neither run executed any decorated tool.** Avoids double-reporting while still covering agents whose tools are not decorated.
 - **`tokens` is skipped when the baseline recorded no usage.** A percentage of zero is meaningless.
 - **`steps` counts model and tool steps and ignores decreases.** Doing less is not a regression this check should flag.
-- **`latency` findings have severity `info` and cannot be set to `fail` or `warn`.** The spec says it never fails, and timing depends on the network and machine.
+- **`latency` findings have severity `info` and cannot be set to `fail` or `warn`.** Timing depends on the network and the machine, not on the change under test.
 - **A drift run whose agent raised keeps its candidate but is not compared (outcome `error`).** A crash is a test failure, not behavioural drift.
 - **`replex approve` copies the candidate over the baseline, then deletes the candidate, and is refused in CI.** Approval is a local, reviewed act, and a stale candidate should not be approved twice.
 - **`replex report` exits 0 unless `--fail-on-drift` is given.** It is usually a reporting step after the tests already decided pass or fail.
@@ -43,7 +43,8 @@ Choices the specification left open, one line each: decision, reason.
 
 - **The built console is committed under `src/replex/console/static/`, and CI checks it matches the source.** `pip install` and the wheel then need no Node toolchain.
 - **The HTML report inlines the same React app and the data as JSON in one file.** One codebase for both, and the report works from a CI artifact with no server.
-- **`replex console` binds 127.0.0.1 and has a `--host` option used only inside containers.** The spec requires loopback; a container must listen on its own interface, and compose publishes it on the host's loopback only.
+- **`replex console` binds 127.0.0.1 and has a `--host` option used only inside containers.** The console has no authentication; a container must listen on its own interface, and compose publishes it on the host's loopback only.
+- **The console only answers requests whose Host header is a loopback name.** Binding to 127.0.0.1 alone does not stop DNS rebinding from a web page.
 - **Long text diffs fall back to a whole before/after replacement when the texts share less than half their words.** A word-level diff of two unrelated answers is unreadable confetti.
 
 ## Example, packaging and tooling
@@ -52,6 +53,6 @@ Choices the specification left open, one line each: decision, reason.
 - **The example is its own pytest project with its own `[tool.replex]`.** Its settings (cassette dir, mock host, custom redaction rule) do not leak into the library's tests.
 - **The example's simulated model is a mock-provider responder that follows the system prompt.** The v1 → v2 prompt change produces a genuine behaviour change offline.
 - **Live recordings go to `cassettes/live/<provider>/` and replay through a separate, skip-if-empty test.** Real cassettes are kept apart from mock ones and are only made by the owner.
-- **Claude recordings default to `claude-sonnet-5-5` (overridable with `CLAUDE_MODEL`); the MiMo model id always comes from `MIMO_MODEL`.** The spec forbids hard-coding the MiMo id.
+- **Claude recordings default to `claude-sonnet-5-5` (overridable with `CLAUDE_MODEL`); the MiMo model id always comes from `MIMO_MODEL`.** MiMo ids change between releases and endpoints, so it is never hard-coded.
 - **A Dockerfile and compose file provide the demo, the console and the full test gate in containers.** Reproducible runs on machines without the right Python versions; they add no runtime features.
 - **The overhead benchmark reports the median of five runs, in nanoseconds.** Single runs are noisy on laptops and CI machines.

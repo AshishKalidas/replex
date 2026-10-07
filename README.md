@@ -1,5 +1,7 @@
 # RepleX
 
+[![CI](https://github.com/AshishKalidas/replex/actions/workflows/ci.yml/badge.svg)](https://github.com/AshishKalidas/replex/actions/workflows/ci.yml)
+
 **Record-and-replay regression testing for AI agents.** Record an agent run once, replay it
 offline forever, and fail CI when its behaviour drifts.
 
@@ -24,10 +26,10 @@ RepleX treats an agent run like a snapshot test:
 
 ## Quick start (60 seconds)
 
-RepleX is not on PyPI yet. Install it from a checkout (Python 3.10 to 3.13):
+RepleX is not on PyPI yet. Install it from GitHub (Python 3.10 to 3.13):
 
 ```bash
-pip install -e ".[console]"
+pip install "replex[console] @ git+https://github.com/AshishKalidas/replex"
 ```
 
 Decorate your tools and mark a test:
@@ -141,7 +143,7 @@ Details: [docs/REDACTION.md](docs/REDACTION.md).
 | [WALKTHROUGH](docs/WALKTHROUGH.md) | The example agent, a prompt change and the drift it causes |
 | [CI](docs/CI.md) | GitHub Actions: replay on every push, a nightly drift job |
 | [LIMITATIONS](docs/LIMITATIONS.md) | What replay does and does not prove |
-| [DECISIONS](docs/DECISIONS.md) | Design decisions not fixed by the spec |
+| [DECISIONS](docs/DECISIONS.md) | Design decisions and the reasons for them |
 
 ## Limits
 
@@ -159,6 +161,7 @@ More in [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 ## Development
 
 ```bash
+git clone https://github.com/AshishKalidas/replex && cd replex
 make install       # editable install with dev extras
 make test          # full suite, 90% coverage gate, plus the example's tests
 make lint typecheck

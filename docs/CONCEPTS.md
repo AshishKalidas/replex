@@ -202,7 +202,7 @@ duration are recorded. The `tools` setting decides what happens on replay:
 
 | `tools` | Behaviour |
 |---|---|
-| `replay` (default in `replay`) | Return the recorded result for the same name and normalised arguments; never execute. A recorded exception is re-raised (same type when importable, else `ReplayedToolError`) |
+| `replay` (default in `replay`) | Return the recorded result for the same name and normalised arguments; never execute. A recorded exception is re-raised (same type when that type is already imported, else `ReplayedToolError`) |
 | `live` (forced in `record`/`rewrite`) | Always execute |
 | `auto` (default in `drift`) | Replay when name and arguments match a recording; otherwise execute if `safe=True`, else raise `UnrecordedToolCall` |
 

@@ -48,8 +48,23 @@ def dumps_data(data: Any) -> str:
     return json.dumps(data, sort_keys=True, indent=2, ensure_ascii=False) + "\n"
 
 
+def _read_umask() -> int:
+    mask = os.umask(0)
+    os.umask(mask)
+    return mask
+
+
+# Read once at import: changing the umask is process-wide, so doing it per write would race
+# with file creation in other threads.
+_FILE_MODE = 0o666 & ~_read_umask()
+
+
 def atomic_write_text(path: str | os.PathLike[str], text: str) -> Path:
-    """Write ``text`` to ``path`` atomically (temp file in the same directory, then rename)."""
+    """Write ``text`` to ``path`` atomically (temp file in the same directory, then rename).
+
+    The file gets the permissions a plain ``open(path, "w")`` would give it; ``mkstemp``
+    alone would leave it readable by its owner only.
+    """
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp", dir=target.parent)
@@ -58,6 +73,7 @@ def atomic_write_text(path: str | os.PathLike[str], text: str) -> Path:
             fh.write(text)
             fh.flush()
             os.fsync(fh.fileno())
+        os.chmod(tmp, _FILE_MODE)
         os.replace(tmp, target)
     except BaseException:
         try:

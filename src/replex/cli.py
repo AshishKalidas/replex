@@ -296,9 +296,8 @@ def report_cmd(
         written = atomic_write_text(html_out, html_report(reports)).resolve()
         console.print(f"HTML report: {written}")
     if md_out:
-        Path(md_out).parent.mkdir(parents=True, exist_ok=True)
-        Path(md_out).write_text(reports_markdown(reports), encoding="utf-8")
-        console.print(f"Markdown summary: {Path(md_out).resolve()}")
+        written = atomic_write_text(md_out, reports_markdown(reports)).resolve()
+        console.print(f"Markdown summary: {written}")
     if json_out:
         text = json.dumps([r.to_dict() for r in reports], indent=2, sort_keys=True) + "\n"
         console.print(f"JSON: {atomic_write_text(json_out, text).resolve()}")

@@ -101,11 +101,6 @@ def match_key(method: str, url: str, body: Any) -> str:
     return "sha256:" + hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-def args_key(name: str, args: Any) -> str:
-    """Identity of a tool call: name plus canonical arguments."""
-    return f"{name}:{canonical_json(args)}"
-
-
 # ----------------------------------------------------------------- diagnostics
 
 
