@@ -45,7 +45,9 @@ DEFAULT_PATTERNS: tuple[PatternRule, ...] = (
     ),
     PatternRule(
         "EMAIL",
-        re.compile(r"(?<![\w.+\-])[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}"),
+        re.compile(
+            r"(?<![\w.+\-])[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}"
+        ),
     ),
     PatternRule(
         "PHONE",

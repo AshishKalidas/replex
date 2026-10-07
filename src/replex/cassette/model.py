@@ -35,7 +35,7 @@ class RecordedRequest(_Model):
 
 
 class RecordedResponse(_Model):
-    """An HTTP response. Streamed responses keep their events in ``stream`` and leave ``body`` null."""
+    """An HTTP response. A streamed response keeps its events in ``stream``; ``body`` is null."""
 
     status: int
     headers: dict[str, str] = Field(default_factory=dict)
@@ -102,7 +102,7 @@ class CassetteUsage(_Model):
 class Cassette(_Model):
     """One recorded agent run."""
 
-    schema_version: Literal[1] = SCHEMA_VERSION
+    schema_version: Literal[1] = 1
     name: str
     created_at: str
     replex_version: str

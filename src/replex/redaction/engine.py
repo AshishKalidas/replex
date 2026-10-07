@@ -174,7 +174,9 @@ def _mask(value: str) -> str:
     return value[:4] + "…" if len(value) > 4 else "…"
 
 
-def scan_value(obj: Any, rules: RedactionRules | None = None, *, file: str = "") -> list[LeakFinding]:
+def scan_value(
+    obj: Any, rules: RedactionRules | None = None, *, file: str = ""
+) -> list[LeakFinding]:
     """Find unredacted secrets anywhere in a decoded cassette (or any JSON value).
 
     Header maps are recognised by their key, so a ``headers`` object whose sensitive

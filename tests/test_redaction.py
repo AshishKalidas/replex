@@ -21,8 +21,17 @@ from replex.redaction import (
 
 @pytest.mark.parametrize(
     "name",
-    ["Authorization", "x-api-key", "api-key", "Cookie", "set-cookie", "X-Goog-Api-Key",
-     "x-auth-token", "client_secret", "anthropic-ratelimit-tokens-limit"],
+    [
+        "Authorization",
+        "x-api-key",
+        "api-key",
+        "Cookie",
+        "set-cookie",
+        "X-Goog-Api-Key",
+        "x-auth-token",
+        "client_secret",
+        "anthropic-ratelimit-tokens-limit",
+    ],
 )
 def test_sensitive_names(name: str) -> None:
     assert is_sensitive_name(name)
@@ -64,8 +73,15 @@ def test_default_patterns(text: str, kind: str) -> None:
 
 @pytest.mark.parametrize(
     "text",
-    ["order 1042", "2026-10-07T09:00:00Z", "risk-assessment-for-the-quarter-2026", "v1.2.3",
-     "sha256:deadbeef", "msg_mock_0001", "toolu_01XFDUDYJgAACzvnptvVoYEL"],
+    [
+        "order 1042",
+        "2026-10-07T09:00:00Z",
+        "risk-assessment-for-the-quarter-2026",
+        "v1.2.3",
+        "sha256:deadbeef",
+        "msg_mock_0001",
+        "toolu_01XFDUDYJgAACzvnptvVoYEL",
+    ],
 )
 def test_no_false_positives(text: str) -> None:
     assert Redactor().text(text) == text
@@ -208,7 +224,7 @@ def test_same_secret_same_token(secrets: list[str]) -> None:
     first = [r.text(s) for s in secrets]
     second = [r.text(s) for s in secrets]
     assert first == second
-    tokens = {t for t in first}
+    tokens = set(first)
     assert all(re.fullmatch(r"\[REDACTED_[A-Z_]+_\d+\]", t) for t in tokens)
     assert len(tokens) == len(set(secrets))
 
