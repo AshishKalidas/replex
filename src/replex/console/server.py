@@ -56,7 +56,11 @@ class _Store:
         raise HTTPException(404, f"unknown run kind {kind!r}")
 
     def path(self, kind: str, name: str) -> Path:
-        if not name or sanitise_name(name) != name:
+        try:
+            valid = bool(name) and sanitise_name(name) == name
+        except ReplexError:
+            valid = False
+        if not valid:
             raise HTTPException(400, "invalid cassette name")
         p = cassette_path(self.directory(kind), name)
         if not p.is_file():
@@ -211,6 +215,8 @@ def create_app(baseline_dir: Path, candidate_dir: Path, policy_path: Path | None
 
     @app.get("/{path:path}", include_in_schema=False)
     def index(path: str = "") -> Response:
+        if path.startswith("api/"):
+            raise HTTPException(404, f"no API endpoint /{path}")
         page = STATIC / "index.html"
         if not page.is_file():
             return Response(

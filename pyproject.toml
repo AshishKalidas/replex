@@ -60,6 +60,9 @@ replex = "replex.pytest_plugin"
 Documentation = "https://github.com/ashishkalidas/replex/tree/main/docs"
 Source = "https://github.com/ashishkalidas/replex"
 
+[tool.hatch.build]
+exclude = ["**/._*", "**/.DS_Store"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/replex"]
 
@@ -72,7 +75,10 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 pytester_example_dir = "tests"
-filterwarnings = ["error::pytest.PytestUnraisableExceptionWarning"]
+filterwarnings = [
+  "error::pytest.PytestUnraisableExceptionWarning",
+  "ignore:Using `httpx` with `starlette.testclient`",
+]
 markers = ["slow: slower tests (benchmarks)"]
 
 [tool.coverage.run]
