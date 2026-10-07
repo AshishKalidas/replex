@@ -1,0 +1,576 @@
+{
+  "created_at": "2026-10-07T10:15:19Z",
+  "events": [
+    {
+      "duration_ms": 1,
+      "index": 0,
+      "request": {
+        "body": {
+          "max_tokens": 1024,
+          "messages": [
+            {
+              "content": "Where is my order 1043?",
+              "role": "user"
+            }
+          ],
+          "model": "mock-sonnet",
+          "stream": true,
+          "system": "You are the customer support agent for Acme Outdoor.\nAlways look up the order with get_order first.\nBefore creating any refund, ALWAYS call check_refund_policy with the order's category and days since delivery, and only call create_refund_request if the order is eligible.\nReply with a single JSON object and nothing else: {\"decision\": \"refund_requested\" | \"refund_denied\" | \"info\", \"refund_id\": string or null, \"message\": \"<one short paragraph for the customer>\"}.",
+          "tools": [
+            {
+              "description": "Look up an order by its id.",
+              "input_schema": {
+                "properties": {
+                  "order_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "order_id"
+                ],
+                "type": "object"
+              },
+              "name": "get_order"
+            },
+            {
+              "description": "Check whether an order is eligible for a refund.",
+              "input_schema": {
+                "properties": {
+                  "category": {
+                    "type": "string"
+                  },
+                  "days_since_delivery": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "category",
+                  "days_since_delivery"
+                ],
+                "type": "object"
+              },
+              "name": "check_refund_policy"
+            },
+            {
+              "description": "Create a refund request for an order.",
+              "input_schema": {
+                "properties": {
+                  "amount": {
+                    "type": "number"
+                  },
+                  "order_id": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "order_id",
+                  "amount",
+                  "reason"
+                ],
+                "type": "object"
+              },
+              "name": "create_refund_request"
+            },
+            {
+              "description": "Search the help-centre articles.",
+              "input_schema": {
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "query"
+                ],
+                "type": "object"
+              },
+              "name": "search_docs"
+            }
+          ]
+        },
+        "body_encoding": "json",
+        "headers": {
+          "accept": "*/*",
+          "accept-encoding": "identity",
+          "anthropic-version": "2023-06-01",
+          "connection": "keep-alive",
+          "content-length": "1477",
+          "content-type": "application/json",
+          "host": "127.0.0.1:61228",
+          "user-agent": "python-httpx/0.28.1",
+          "x-api-key": "[REDACTED]"
+        },
+        "match_key": "sha256:52a2a9b0deb35f98059aa50447b3b07855c3ab5dae90294f6b51b947f11377a9",
+        "method": "POST",
+        "url": "http://127.0.0.1:61228/v1/messages"
+      },
+      "response": {
+        "body": null,
+        "body_encoding": "json",
+        "headers": {
+          "content-type": "text/event-stream",
+          "date": "Wed, 07 Oct 2026 10:15:19 GMT",
+          "request-id": "req_mock_0001",
+          "server": "BaseHTTP/0.6 Python/3.12.14",
+          "x-replex-mock": "true"
+        },
+        "status": 200,
+        "stream": [
+          {
+            "data": {
+              "message": {
+                "content": [],
+                "id": "msg_mock_0001",
+                "model": "mock-sonnet",
+                "role": "assistant",
+                "stop_reason": null,
+                "stop_sequence": null,
+                "type": "message",
+                "usage": {
+                  "input_tokens": 130,
+                  "output_tokens": 1
+                }
+              },
+              "type": "message_start"
+            },
+            "event": "message_start",
+            "id": null
+          },
+          {
+            "data": {
+              "type": "ping"
+            },
+            "event": "ping",
+            "id": null
+          },
+          {
+            "data": {
+              "content_block": {
+                "text": "",
+                "type": "text"
+              },
+              "index": 0,
+              "type": "content_block_start"
+            },
+            "event": "content_block_start",
+            "id": null
+          },
+          {
+            "data": {
+              "delta": {
+                "text": "Let me look ",
+                "type": "text_delta"
+              },
+              "index": 0,
+              "type": "content_block_delta"
+            },
+            "event": "content_block_delta",
+            "id": null
+          },
+          {
+            "data": {
+              "delta": {
+                "text": "up order 1043.",
+                "type": "text_delta"
+              },
+              "index": 0,
+              "type": "content_block_delta"
+            },
+            "event": "content_block_delta",
+            "id": null
+          },
+          {
+            "data": {
+              "index": 0,
+              "type": "content_block_stop"
+            },
+            "event": "content_block_stop",
+            "id": null
+          },
+          {
+            "data": {
+              "content_block": {
+                "id": "toolu_mock_0001_1",
+                "input": {},
+                "name": "get_order",
+                "type": "tool_use"
+              },
+              "index": 1,
+              "type": "content_block_start"
+            },
+            "event": "content_block_start",
+            "id": null
+          },
+          {
+            "data": {
+              "delta": {
+                "partial_json": "{\"order_id\":",
+                "type": "input_json_delta"
+              },
+              "index": 1,
+              "type": "content_block_delta"
+            },
+            "event": "content_block_delta",
+            "id": null
+          },
+          {
+            "data": {
+              "delta": {
+                "partial_json": " \"1043\"}",
+                "type": "input_json_delta"
+              },
+              "index": 1,
+              "type": "content_block_delta"
+            },
+            "event": "content_block_delta",
+            "id": null
+          },
+          {
+            "data": {
+              "index": 1,
+              "type": "content_block_stop"
+            },
+            "event": "content_block_stop",
+            "id": null
+          },
+          {
+            "data": {
+              "delta": {
+                "stop_reason": "tool_use",
+                "stop_sequence": null
+              },
+              "type": "message_delta",
+              "usage": {
+                "output_tokens": 12
+              }
+            },
+            "event": "message_delta",
+            "id": null
+          },
+          {
+            "data": {
+              "type": "message_stop"
+            },
+            "event": "message_stop",
+            "id": null
+          }
+        ]
+      },
+      "type": "exchange"
+    },
+    {
+      "args": {
+        "order_id": "1043"
+      },
+      "duration_ms": 0,
+      "error": null,
+      "index": 1,
+      "lossy": false,
+      "name": "get_order",
+      "result": {
+        "amount": 24.5,
+        "category": "accessories",
+        "currency": "EUR",
+        "customer_email": "[REDACTED_EMAIL_1]",
+        "days_since_delivery": null,
+        "item": "Insulated water bottle",
+        "order_id": "1043",
+        "status": "shipped"
+      },
+      "type": "tool_call"
+    },
+    {
+      "duration_ms": 0,
+      "index": 2,
+      "request": {
+        "body": {
+          "max_tokens": 1024,
+          "messages": [
+            {
+              "content": "Where is my order 1043?",
+              "role": "user"
+            },
+            {
+              "content": [
+                {
+                  "text": "Let me look up order 1043.",
+                  "type": "text"
+                },
+                {
+                  "id": "toolu_mock_0001_1",
+                  "input": {
+                    "order_id": "1043"
+                  },
+                  "name": "get_order",
+                  "type": "tool_use"
+                }
+              ],
+              "role": "assistant"
+            },
+            {
+              "content": [
+                {
+                  "content": "{\"order_id\": \"1043\", \"customer_email\": \"[REDACTED_EMAIL_1]\", \"item\": \"Insulated water bottle\", \"category\": \"accessories\", \"amount\": 24.5, \"currency\": \"EUR\", \"status\": \"shipped\", \"days_since_delivery\": null}",
+                  "tool_use_id": "toolu_mock_0001_1",
+                  "type": "tool_result"
+                }
+              ],
+              "role": "user"
+            }
+          ],
+          "model": "mock-sonnet",
+          "stream": true,
+          "system": "You are the customer support agent for Acme Outdoor.\nAlways look up the order with get_order first.\nBefore creating any refund, ALWAYS call check_refund_policy with the order's category and days since delivery, and only call create_refund_request if the order is eligible.\nReply with a single JSON object and nothing else: {\"decision\": \"refund_requested\" | \"refund_denied\" | \"info\", \"refund_id\": string or null, \"message\": \"<one short paragraph for the customer>\"}.",
+          "tools": [
+            {
+              "description": "Look up an order by its id.",
+              "input_schema": {
+                "properties": {
+                  "order_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "order_id"
+                ],
+                "type": "object"
+              },
+              "name": "get_order"
+            },
+            {
+              "description": "Check whether an order is eligible for a refund.",
+              "input_schema": {
+                "properties": {
+                  "category": {
+                    "type": "string"
+                  },
+                  "days_since_delivery": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "category",
+                  "days_since_delivery"
+                ],
+                "type": "object"
+              },
+              "name": "check_refund_policy"
+            },
+            {
+              "description": "Create a refund request for an order.",
+              "input_schema": {
+                "properties": {
+                  "amount": {
+                    "type": "number"
+                  },
+                  "order_id": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "order_id",
+                  "amount",
+                  "reason"
+                ],
+                "type": "object"
+              },
+              "name": "create_refund_request"
+            },
+            {
+              "description": "Search the help-centre articles.",
+              "input_schema": {
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "query"
+                ],
+                "type": "object"
+              },
+              "name": "search_docs"
+            }
+          ]
+        },
+        "body_encoding": "json",
+        "headers": {
+          "accept": "*/*",
+          "accept-encoding": "identity",
+          "anthropic-version": "2023-06-01",
+          "connection": "keep-alive",
+          "content-length": "1987",
+          "content-type": "application/json",
+          "host": "127.0.0.1:61228",
+          "user-agent": "python-httpx/0.28.1",
+          "x-api-key": "[REDACTED]"
+        },
+        "match_key": "sha256:7e380c3906fbe849741b517ea9664fd975fc87c0ba8fd4cea8468b7d918c0da1",
+        "method": "POST",
+        "url": "http://127.0.0.1:61228/v1/messages"
+      },
+      "response": {
+        "body": null,
+        "body_encoding": "json",
+        "headers": {
+          "content-type": "text/event-stream",
+          "date": "Wed, 07 Oct 2026 10:15:19 GMT",
+          "request-id": "req_mock_0002",
+          "server": "BaseHTTP/0.6 Python/3.12.14",
+          "x-replex-mock": "true"
+        },
+        "status": 200,
+        "stream": [
+          {
+            "data": {
+              "message": {
+                "content": [],
+                "id": "msg_mock_0002",
+                "model": "mock-sonnet",
+                "role": "assistant",
+                "stop_reason": null,
+                "stop_sequence": null,
+                "type": "message",
+                "usage": {
+                  "input_tokens": 264,
+                  "output_tokens": 1
+                }
+              },
+              "type": "message_start"
+            },
+            "event": "message_start",
+            "id": null
+          },
+          {
+            "data": {
+              "type": "ping"
+            },
+            "event": "ping",
+            "id": null
+          },
+          {
+            "data": {
+              "content_block": {
+                "text": "",
+                "type": "text"
+              },
+              "index": 0,
+              "type": "content_block_start"
+            },
+            "event": "content_block_start",
+            "id": null
+          },
+          {
+            "data": {
+              "delta": {
+                "text": "{\"decision\": \"info\", \"refund_id\": ",
+                "type": "text_delta"
+              },
+              "index": 0,
+              "type": "content_block_delta"
+            },
+            "event": "content_block_delta",
+            "id": null
+          },
+          {
+            "data": {
+              "delta": {
+                "text": "null, \"message\": \"Your ",
+                "type": "text_delta"
+              },
+              "index": 0,
+              "type": "content_block_delta"
+            },
+            "event": "content_block_delta",
+            "id": null
+          },
+          {
+            "data": {
+              "delta": {
+                "text": "order 1043 (Insulated ",
+                "type": "text_delta"
+              },
+              "index": 0,
+              "type": "content_block_delta"
+            },
+            "event": "content_block_delta",
+            "id": null
+          },
+          {
+            "data": {
+              "delta": {
+                "text": "water bottle) is ",
+                "type": "text_delta"
+              },
+              "index": 0,
+              "type": "content_block_delta"
+            },
+            "event": "content_block_delta",
+            "id": null
+          },
+          {
+            "data": {
+              "delta": {
+                "text": "currently shipped.\"}",
+                "type": "text_delta"
+              },
+              "index": 0,
+              "type": "content_block_delta"
+            },
+            "event": "content_block_delta",
+            "id": null
+          },
+          {
+            "data": {
+              "index": 0,
+              "type": "content_block_stop"
+            },
+            "event": "content_block_stop",
+            "id": null
+          },
+          {
+            "data": {
+              "delta": {
+                "stop_reason": "end_turn",
+                "stop_sequence": null
+              },
+              "type": "message_delta",
+              "usage": {
+                "output_tokens": 29
+              }
+            },
+            "event": "message_delta",
+            "id": null
+          },
+          {
+            "data": {
+              "type": "message_stop"
+            },
+            "event": "message_stop",
+            "id": null
+          }
+        ]
+      },
+      "type": "exchange"
+    }
+  ],
+  "meta": {
+    "git_sha": "8f1425b",
+    "model": "mock-sonnet",
+    "provider": "mock",
+    "tags": []
+  },
+  "name": "order_status_stream",
+  "replex_version": "0.1.0",
+  "schema_version": 1,
+  "usage": {
+    "input_tokens": 394,
+    "output_tokens": 41
+  }
+}

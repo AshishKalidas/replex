@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { detectSource, splitRunId, staticSource, summarise } from "../src/api";
 import { filterRuns, formatDate, formatMs, formatTokens, inlineJson, lastMessageText, stepSubtitle, stepTitle, truncate } from "../src/format";
 import { href, parseRoute, type Route } from "../src/router";
-import { tokenize, wordDiff } from "../src/textdiff";
+import { readableDiff, tokenize, wordDiff } from "../src/textdiff";
 import { payload, trace } from "./fixtures";
 
 describe("router", () => {
@@ -72,6 +72,14 @@ describe("textdiff", () => {
     ]);
     expect(wordDiff("a", "a")).toEqual([{ op: "same", text: "a" }]);
     expect(wordDiff("", "new")).toEqual([{ op: "add", text: "new" }]);
+  });
+  it("replaces wholesale when texts share little", () => {
+    expect(readableDiff("Refund approved.", "Refund approved quickly.")).toEqual(wordDiff("Refund approved.", "Refund approved quickly."));
+    expect(readableDiff("I have requested your refund", "Done! It is on its way")).toEqual([
+      { op: "del", text: "I have requested your refund" },
+      { op: "add", text: "\nDone! It is on its way" },
+    ]);
+    expect(readableDiff("", "x")).toEqual([{ op: "add", text: "x" }]);
   });
   it("falls back for very long texts", () => {
     const long = "word ".repeat(1000);

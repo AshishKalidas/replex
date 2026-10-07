@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Support agent decision",
+  "type": "object",
+  "required": ["decision", "refund_id", "message"],
+  "properties": {
+    "decision": {"enum": ["refund_requested", "refund_denied", "info"]},
+    "refund_id": {"type": ["string", "null"], "pattern": "^RF-\\d+$"},
+    "message": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

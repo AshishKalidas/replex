@@ -273,3 +273,6 @@ table.summary { width: 100%; border-collapse: collapse; background: var(--surfac
   .diff-details { grid-template-columns: 1fr; }
   .search { width: 100%; }
 }
+
+.legend-item .mark { display: inline; margin-right: 2px; }
+.diff-details > div > p.muted { margin: 0; padding: 12px 14px; }

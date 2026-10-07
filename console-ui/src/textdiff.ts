@@ -52,3 +52,19 @@ export function wordDiff(before: string, after: string): Piece[] {
   while (j < m) push("add", b[j++]!);
   return out;
 }
+
+/**
+ * A word diff when the texts are mostly alike; otherwise a plain before/after replacement,
+ * which reads better than a confetti of tiny edits.
+ */
+export function readableDiff(before: string, after: string, minShared = 0.5): Piece[] {
+  const pieces = wordDiff(before, after);
+  const words = (s: string) => s.replace(/\s+/g, "").length;
+  const shared = pieces.filter((p) => p.op === "same").reduce((n, p) => n + words(p.text), 0);
+  const longest = Math.max(words(before), words(after), 1);
+  if (shared / longest >= minShared) return pieces;
+  return [
+    ...(before ? [{ op: "del" as const, text: before }] : []),
+    ...(after ? [{ op: "add" as const, text: (before ? "\n" : "") + after }] : []),
+  ];
+}

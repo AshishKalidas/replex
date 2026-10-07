@@ -1,0 +1,27 @@
+# docker compose run --rm demo      # replay + drift demo, writes the HTML report to a volume
+# docker compose up console         # http://127.0.0.1:8765 (bound to the host's loopback only)
+# docker compose run --rm test      # every quality gate, in a container
+services:
+  console:
+    build: { context: ., target: runtime }
+    image: replex:latest
+    ports:
+      - "127.0.0.1:8765:8765"
+    volumes:
+      - replex-out:/app/examples/support_agent/.replex:ro
+
+  demo:
+    build: { context: ., target: dev }
+    image: replex:dev
+    working_dir: /app
+    command: ["python", "examples/support_agent/demo.py"]
+    volumes:
+      - replex-out:/app/examples/support_agent/.replex
+
+  test:
+    build: { context: ., target: test }
+    image: replex:test
+    command: ["echo", "all gates passed during the image build"]
+
+volumes:
+  replex-out: {}

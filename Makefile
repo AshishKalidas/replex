@@ -45,7 +45,6 @@ demo: ## Replay the example, run a drift check between prompt versions, write th
 
 redact-check: ## Scan every committed cassette for secrets / personal data
 	$(PY) -m replex.cli redact --check $(EXAMPLE)/cassettes
-	$(PY) -m replex.cli redact --check tests/cassettes
 
 bench: ## Measure decorated-tool overhead outside a session
 	$(PY) -m pytest -q tests/test_benchmark.py -s

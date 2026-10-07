@@ -5,7 +5,7 @@ import { StepDetails } from "../components/StepCard";
 import { inlineJson, stepSubtitle, stepTitle } from "../format";
 import { useAsync, useKeyNav } from "../hooks";
 import { href } from "../router";
-import { wordDiff } from "../textdiff";
+import { readableDiff } from "../textdiff";
 import type { CompareResult, DiffEntry, FieldChange, RunSummary, Step } from "../types";
 
 const MARK: Record<DiffEntry["status"], string> = { same: "=", changed: "~", added: "+", removed: "−" };
@@ -43,7 +43,7 @@ function Change({ change }: { change: FieldChange }) {
     return (
       <div className="change">
         <code className="change-path">{change.path}</code>
-        <DiffText pieces={wordDiff(change.before, change.after)} />
+        <DiffText pieces={readableDiff(change.before, change.after)} />
       </div>
     );
   }

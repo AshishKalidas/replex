@@ -48,6 +48,7 @@ export function RunsView({ source, initialQuery }: { source: DataSource; initial
       </EmptyState>
     );
   }
+  const hasDates = runs.data.some((r) => r.created_at);
   const failed = runs.data.filter((r) => r.drift === "failed" && r.kind === "candidate").length;
 
   return (
@@ -104,7 +105,7 @@ export function RunsView({ source, initialQuery }: { source: DataSource; initial
                 <th className="num">Tools</th>
                 <th className="num">Tokens</th>
                 <th className="num">Latency</th>
-                <th>Recorded</th>
+                {hasDates && <th>Recorded</th>}
                 <th>Drift</th>
               </tr>
             </thead>
@@ -130,7 +131,7 @@ export function RunsView({ source, initialQuery }: { source: DataSource; initial
                   <td className="num">{r.tool_calls ?? "—"}</td>
                   <td className="num">{formatTokens(r.tokens)}</td>
                   <td className="num">{formatMs(r.latency_ms)}</td>
-                  <td className="muted">{formatDate(r.created_at)}</td>
+                  {hasDates && <td className="muted">{formatDate(r.created_at)}</td>}
                   <td>
                     {r.drift ? (
                       <a href={href({ view: "drift", name: r.name })}>

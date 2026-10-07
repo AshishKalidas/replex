@@ -1,0 +1,17 @@
+# The example is its own pytest project so its [tool.replex] settings apply when you run
+# `pytest` from this directory (or `make demo` from the repository root).
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.replex]
+cassette_dir = "cassettes"
+candidate_dir = ".replex/candidates"
+policy = "replex.policy.yaml"
+# The mock provider runs on 127.0.0.1; real recordings go through `record_live.py`.
+intercept_hosts = ["127.0.0.1", "api.anthropic.com"]
+passthrough_hosts = []
+# Example of a user redaction rule: internal ticket references.
+redact_patterns = [{ name = "ticket", pattern = "TCK-\\d{6}" }]

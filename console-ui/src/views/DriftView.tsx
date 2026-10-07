@@ -3,7 +3,7 @@ import { DiffText, DriftPill, EmptyState, ErrorState, Loading, Pill, ToolChips }
 import { formatMs, formatTokens, inlineJson } from "../format";
 import { useAsync, useKeyNav } from "../hooks";
 import { href } from "../router";
-import { wordDiff } from "../textdiff";
+import { readableDiff } from "../textdiff";
 import type { Finding, Severity } from "../types";
 
 const GROUPS: { severity: Severity; title: string; tone: string }[] = [
@@ -131,7 +131,7 @@ export function DriftView({ source, name }: { source: DataSource; name: string }
               {b.final_output === c.final_output ? (
                 <p className="final">{c.final_output || <span className="muted">(empty)</span>}</p>
               ) : (
-                <DiffText pieces={wordDiff(b.final_output, c.final_output)} />
+                <DiffText pieces={readableDiff(b.final_output, c.final_output)} />
               )}
             </td>
           </tr>

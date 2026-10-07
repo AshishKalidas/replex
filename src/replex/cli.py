@@ -333,7 +333,9 @@ def redact_cmd(directory: Path, check: bool, as_json: bool) -> None:
             table.add_row(f.file, f.location, f.kind, f.excerpt)
         _console().print(table)
     else:
-        n = len(list(Path(directory).rglob("*.replex.json"))) if Path(directory).is_dir() else 1
+        root = Path(directory)
+        files = root.rglob("*.replex.json") if root.is_dir() else [root]
+        n = sum(1 for f in files if not f.name.startswith("."))
         click.echo(f"ok: {n} cassette(s) in {directory}, nothing unredacted")
     if findings:
         sys.exit(1)
