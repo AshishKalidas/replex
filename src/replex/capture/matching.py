@@ -60,13 +60,35 @@ def _drop(node: Any, parts: list[str]) -> None:
                 del node[i]
 
 
+def canonicalise_embedded_json(value: Any) -> Any:
+    """Rewrite strings that hold a JSON object or array into canonical (sorted-key) form.
+
+    Agents usually send tool results back to the model as ``json.dumps(result)``. Cassettes
+    store results with sorted keys, so the replayed result may serialise in a different key
+    order than the live one did; comparing embedded JSON canonically makes that irrelevant.
+    """
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped[:1] in ("{", "[") and stripped[-1:] in ("}", "]"):
+            try:
+                return canonical_json(json.loads(stripped))
+            except json.JSONDecodeError:
+                return value
+        return value
+    if isinstance(value, list):
+        return [canonicalise_embedded_json(v) for v in value]
+    if isinstance(value, dict):
+        return {k: canonicalise_embedded_json(v) for k, v in value.items()}
+    return value
+
+
 def normalise_body(
     body: Any,
     ignore_fields: Sequence[str] = DEFAULT_IGNORE_FIELDS,
     normalisers: Sequence[BodyNormaliser] = (),
 ) -> Any:
-    """Drop volatile fields and apply user normalisers, in that order."""
-    body = drop_fields(body, ignore_fields)
+    """Drop volatile fields, canonicalise embedded JSON, then apply user normalisers."""
+    body = canonicalise_embedded_json(drop_fields(body, ignore_fields))
     for fn in normalisers:
         body = fn(copy.deepcopy(body))
     return body
