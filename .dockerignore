@@ -1,0 +1,15 @@
+._*
+.git
+.venv
+venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.hypothesis
+.replex
+dist
+build
+console-ui/node_modules
+console-ui/dist
+.env

@@ -1,0 +1,116 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "replex"
+version = "0.1.0"
+description = "Record-and-replay regression testing for AI agents: record a run once, replay it offline forever, and fail CI when behaviour drifts."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Ashish Kalidas" }]
+keywords = ["llm", "agents", "testing", "regression", "record-replay", "pytest", "anthropic", "openai"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Framework :: Pytest",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Testing",
+  "Typing :: Typed",
+]
+dependencies = [
+  "httpx>=0.27",
+  "pydantic>=2.6",
+  "pyyaml>=6.0",
+  "click>=8.1",
+  "rich>=13.0",
+  "tomli>=2.0; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+console = ["fastapi>=0.110", "uvicorn>=0.29"]
+semantic = ["sentence-transformers>=2.6"]
+dev = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.23",
+  "pytest-cov>=5.0",
+  "pytest-xdist>=3.5",
+  "hypothesis>=6.100",
+  "ruff>=0.6",
+  "mypy>=1.10",
+  "types-PyYAML",
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
+  "build>=1.2",
+]
+
+[project.scripts]
+replex = "replex.cli:main"
+
+[project.entry-points.pytest11]
+replex = "replex.pytest_plugin"
+
+[project.urls]
+Documentation = "https://github.com/ashishkalidas/replex/tree/main/docs"
+Source = "https://github.com/ashishkalidas/replex"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/replex"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/replex", "README.md", "LICENSE", "docs", "replex.policy.yaml"]
+
+# ---------------------------------------------------------------- pytest
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+pytester_example_dir = "tests"
+filterwarnings = ["error::pytest.PytestUnraisableExceptionWarning"]
+markers = ["slow: slower tests (benchmarks)"]
+
+[tool.coverage.run]
+source = ["replex"]
+branch = true
+omit = ["*/replex/console/server.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError",
+  "@overload",
+  "\\.\\.\\.$",
+]
+
+# ---------------------------------------------------------------- lint / types
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["console-ui", "src/replex/console/static"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF", "PT", "C4", "PIE", "RET"]
+ignore = ["RUF012", "PT011", "SIM105", "B904"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B011", "PT006", "PT007", "RUF001"]
+"examples/**" = ["RUF001"]
+
+[tool.mypy]
+strict = true
+python_version = "3.10"
+files = ["src/replex"]
+plugins = ["pydantic.mypy"]
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = ["uvicorn", "uvicorn.*", "sentence_transformers", "jsonschema", "tomli"]
+ignore_missing_imports = true

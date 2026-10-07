@@ -1,0 +1,33 @@
+# macOS / exFAT metadata
+._*
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# RepleX working files (candidates are regenerated, never committed)
+.replex/
+replex-report.html
+replex-report.md
+
+# Node
+console-ui/node_modules/
+console-ui/dist/
+
+# Secrets
+.env
+.env.*
