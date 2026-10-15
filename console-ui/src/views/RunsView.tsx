@@ -1,25 +1,101 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { DataSource } from "../api";
-import { DriftPill, EmptyState, ErrorState, KindBadge, Loading } from "../components/common";
+import type { DataSource, WorkspaceInfo } from "../api";
+import { DriftStatus, EmptyState, ErrorState, KindLabel, Loading, PageHead, Segmented, Stat } from "../components/common";
+import { humanize } from "../explain";
 import { filterRuns, formatDate, formatMs, formatTokens, type RunFilter } from "../format";
 import { useAsync, useKeyNav } from "../hooks";
 import { href } from "../router";
+import type { RunSummary } from "../types";
 
 const FILTERS: { id: RunFilter; label: string }[] = [
   { id: "all", label: "All" },
-  { id: "baseline", label: "Baselines" },
-  { id: "candidate", label: "Candidates" },
-  { id: "failed", label: "Drift failed" },
+  { id: "baseline", label: "Recorded" },
+  { id: "candidate", label: "Latest runs" },
+  { id: "failed", label: "Changed" },
 ];
 
-export function RunsView({ source, initialQuery }: { source: DataSource; initialQuery: string }) {
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
+/** One sentence that says what is in the workspace, the way a person would. */
+function summary(runs: RunSummary[]): string {
+  const scenarios = new Set(runs.map((r) => r.name)).size;
+  const candidates = runs.filter((r) => r.kind === "candidate");
+  const drifted = candidates.filter((r) => r.drift === "failed").length;
+  const recorded = `${plural(scenarios, "scenario")} recorded.`;
+  if (!candidates.length) return `${recorded} Nothing has been re-run yet.`;
+  if (!drifted) return `${recorded} Every latest run behaves as recorded.`;
+  return `${recorded} ${drifted} of ${candidates.length} behave differently after the last change.`;
+}
+
+function ProjectOnboarding({
+  workspace,
+  alternatives,
+  onSwitchWorkspace,
+}: {
+  workspace: WorkspaceInfo;
+  alternatives: WorkspaceInfo[];
+  onSwitchWorkspace?: (id: string) => void;
+}) {
+  const sample = alternatives.find((w) => w.id === "sample");
+  return (
+    <EmptyState
+      title="No recordings yet."
+      action={
+        sample &&
+        onSwitchWorkspace && (
+          <button type="button" className="button" onClick={() => onSwitchWorkspace(sample.id)}>
+            Explore the sample workspace
+          </button>
+        )
+      }
+    >
+      <p>
+        RepleX is watching <code>{workspace.baseline_dir}</code>. Record a run and it shows up here
+        the next time you look.
+      </p>
+      <ol className="steps">
+        <li>
+          Mark a test with <code>@pytest.mark.replex</code> and decorate your tools with <code>@replex.tool</code>.
+        </li>
+        <li>
+          Record once with a real key: <code>pytest --replex-mode=record</code>
+        </li>
+        <li>
+          After a prompt or model change: <code>pytest --replex-mode=drift</code>
+        </li>
+      </ol>
+    </EmptyState>
+  );
+}
+
+export function RunsView({
+  source,
+  initialQuery,
+  workspace,
+  alternatives = [],
+  onSwitchWorkspace,
+}: {
+  source: DataSource;
+  initialQuery: string;
+  workspace?: WorkspaceInfo;
+  alternatives?: WorkspaceInfo[];
+  onSwitchWorkspace?: (id: string) => void;
+}) {
   const runs = useAsync(() => source.runs(), [source]);
   const [query, setQuery] = useState(initialQuery);
   const [filter, setFilter] = useState<RunFilter>("all");
   const search = useRef<HTMLInputElement>(null);
 
   const rows = useMemo(
-    () => (runs.state === "ready" ? filterRuns(runs.data, query, filter) : []),
+    () =>
+      runs.state === "ready"
+        ? // Each scenario's recorded run directly above its latest run.
+          filterRuns(runs.data, query, filter).sort(
+            (a, b) => a.name.localeCompare(b.name) || (a.kind === b.kind ? 0 : a.kind === "baseline" ? -1 : 1),
+          )
+        : [],
     [runs, query, filter],
   );
   const [active, setActive] = useKeyNav(rows.length, (i) => {
@@ -39,61 +115,53 @@ export function RunsView({ source, initialQuery }: { source: DataSource; initial
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const eyebrow = workspace?.label ?? source.label;
   if (runs.state === "loading") return <Loading what="runs" />;
   if (runs.state === "error") return <ErrorState error={runs.error} />;
   if (runs.data.length === 0) {
     return (
-      <EmptyState title="No cassettes yet">
-        Record one with <code>pytest --replex-mode=record</code>, then refresh.
-      </EmptyState>
+      <section>
+        <PageHead eyebrow={eyebrow} title="Runs" />
+        {workspace ? (
+          <ProjectOnboarding workspace={workspace} alternatives={alternatives} onSwitchWorkspace={onSwitchWorkspace} />
+        ) : (
+          <EmptyState title="This report is empty." />
+        )}
+      </section>
     );
   }
-  const hasDates = runs.data.some((r) => r.created_at);
-  const failed = runs.data.filter((r) => r.drift === "failed" && r.kind === "candidate").length;
+
+  const all = runs.data;
+  const candidates = all.filter((r) => r.kind === "candidate");
+  const drifted = candidates.filter((r) => r.drift === "failed").length;
+  const hasDates = all.some((r) => r.created_at);
+  const withLatest = new Set(candidates.map((r) => r.name));
 
   return (
     <section>
-      <header className="page-head">
-        <div>
-          <h1>Runs</h1>
-          <p className="muted">
-            {runs.data.filter((r) => r.kind === "baseline").length} baselines ·{" "}
-            {runs.data.filter((r) => r.kind === "candidate").length} candidates
-            {failed > 0 && (
-              <>
-                {" "}· <span className="text-fail">{failed} drifted</span>
-              </>
-            )}
-          </p>
-        </div>
-        <div className="toolbar">
-          <input
-            ref={search}
-            className="search"
-            type="search"
-            placeholder="Search name, model, tool…  ( / )"
-            aria-label="Search runs"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <div className="segmented" role="tablist" aria-label="Filter runs">
-            {FILTERS.map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                role="tab"
-                aria-selected={filter === f.id}
-                className={filter === f.id ? "on" : ""}
-                onClick={() => setFilter(f.id)}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </header>
+      <PageHead eyebrow={eyebrow} title="Runs" lede={summary(all)} />
+
+      <div className="stats">
+        <Stat label="Recorded runs" value={all.length - candidates.length} />
+        <Stat label="Latest runs" value={candidates.length} />
+        <Stat label="Behaviour changed" value={drifted} tone={drifted ? "fail" : undefined} />
+      </div>
+
+      <div className="toolbar">
+        <input
+          ref={search}
+          className="search"
+          type="search"
+          placeholder="Search runs, models and tools"
+          aria-label="Search runs"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <Segmented label="Filter runs" value={filter} options={FILTERS} onChange={(id) => setFilter(id as RunFilter)} />
+      </div>
+
       {rows.length === 0 ? (
-        <EmptyState title="Nothing matches">Try another search or filter.</EmptyState>
+        <EmptyState title="Nothing matches.">Try another search or filter.</EmptyState>
       ) : (
         <div className="table-wrap">
           <table className="runs">
@@ -102,11 +170,10 @@ export function RunsView({ source, initialQuery }: { source: DataSource; initial
                 <th>Run</th>
                 <th>Model</th>
                 <th className="num">Steps</th>
-                <th className="num">Tools</th>
                 <th className="num">Tokens</th>
                 <th className="num">Latency</th>
-                {hasDates && <th>Recorded</th>}
-                <th>Drift</th>
+                {hasDates && <th>Date</th>}
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -119,26 +186,32 @@ export function RunsView({ source, initialQuery }: { source: DataSource; initial
                 >
                   <td>
                     <a className="run-link" href={href({ view: "run", id: r.id, step: null })}>
-                      {r.name}
-                    </a>{" "}
-                    <KindBadge kind={r.kind} />
-                    {r.error && <div className="text-fail small">{r.error}</div>}
+                      {humanize(r.name)}
+                    </a>
+                    <div className="run-sub">
+                      <KindLabel kind={r.kind} />
+                      <code>{r.name}</code>
+                      {r.tool_calls !== undefined && <span>{plural(r.tool_calls, "tool call")}</span>}
+                    </div>
+                    {r.error && <div className="text-fail">{r.error}</div>}
                   </td>
                   <td>
-                    <span className="muted">{r.provider}</span> {r.model}
+                    <div>{r.model}</div>
+                    <div className="run-sub">{r.provider}</div>
                   </td>
                   <td className="num">{r.steps ?? "—"}</td>
-                  <td className="num">{r.tool_calls ?? "—"}</td>
                   <td className="num">{formatTokens(r.tokens)}</td>
                   <td className="num">{formatMs(r.latency_ms)}</td>
-                  {hasDates && <td className="muted">{formatDate(r.created_at)}</td>}
+                  {hasDates && <td className="secondary">{formatDate(r.created_at)}</td>}
                   <td>
-                    {r.drift ? (
-                      <a href={href({ view: "drift", name: r.name })}>
-                        <DriftPill drift={r.drift} warnings={r.warnings} />
+                    {r.kind === "candidate" ? (
+                      <a className="status-link" href={href({ view: "scenario", name: r.name })}>
+                        <DriftStatus drift={r.drift} warnings={r.warnings} />
                       </a>
+                    ) : withLatest.has(r.name) ? (
+                      <span className="quiet">—</span>
                     ) : (
-                      <DriftPill drift={null} />
+                      <DriftStatus drift={null} />
                     )}
                   </td>
                 </tr>

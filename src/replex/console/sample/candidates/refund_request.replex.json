@@ -1,0 +1,776 @@
+{
+  "created_at": "2026-10-15T09:42:30Z",
+  "events": [
+    {
+      "duration_ms": 1,
+      "index": 0,
+      "request": {
+        "body": {
+          "max_tokens": 1024,
+          "messages": [
+            {
+              "content": "Hi, I'd like a refund for order 1042 please, the shoes don't fit. My ticket is [REDACTED_TICKET_1], you can reach me at [REDACTED_EMAIL_1].",
+              "role": "user"
+            }
+          ],
+          "model": "mock-sonnet",
+          "system": "You are the fast, friendly customer support agent for Acme Outdoor. Customers hate waiting.\nLook up the order with get_order. If you need policy details, use search_docs, then act right away without extra checks.\nReply with a single JSON object and nothing else: {\"decision\": \"refund_requested\" | \"refund_denied\" | \"info\", \"refund_id\": string or null, \"message\": \"<one short paragraph for the customer>\"}.",
+          "tools": [
+            {
+              "description": "Look up an order by its id.",
+              "input_schema": {
+                "properties": {
+                  "order_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "order_id"
+                ],
+                "type": "object"
+              },
+              "name": "get_order"
+            },
+            {
+              "description": "Check whether an order is eligible for a refund.",
+              "input_schema": {
+                "properties": {
+                  "category": {
+                    "type": "string"
+                  },
+                  "days_since_delivery": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "category",
+                  "days_since_delivery"
+                ],
+                "type": "object"
+              },
+              "name": "check_refund_policy"
+            },
+            {
+              "description": "Create a refund request for an order.",
+              "input_schema": {
+                "properties": {
+                  "amount": {
+                    "type": "number"
+                  },
+                  "order_id": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "order_id",
+                  "amount",
+                  "reason"
+                ],
+                "type": "object"
+              },
+              "name": "create_refund_request"
+            },
+            {
+              "description": "Search the help-centre articles.",
+              "input_schema": {
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "query"
+                ],
+                "type": "object"
+              },
+              "name": "search_docs"
+            }
+          ]
+        },
+        "body_encoding": "json",
+        "headers": {
+          "accept": "*/*",
+          "accept-encoding": "identity",
+          "anthropic-version": "2023-06-01",
+          "connection": "keep-alive",
+          "content-length": "1511",
+          "content-type": "application/json",
+          "host": "127.0.0.1:64939",
+          "user-agent": "python-httpx/0.28.1",
+          "x-api-key": "[REDACTED]"
+        },
+        "match_key": "sha256:2323f8e22ea93c22032b3f73484adf9a01eabca8f93f501dbfa2194cb966b5e9",
+        "method": "POST",
+        "url": "http://127.0.0.1:64939/v1/messages"
+      },
+      "response": {
+        "body": {
+          "content": [
+            {
+              "id": "toolu_mock_0001_1",
+              "input": {
+                "order_id": "1042"
+              },
+              "name": "get_order",
+              "type": "tool_use"
+            }
+          ],
+          "id": "msg_mock_0001",
+          "model": "mock-sonnet",
+          "role": "assistant",
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "type": "message",
+          "usage": {
+            "input_tokens": 142,
+            "output_tokens": 5
+          }
+        },
+        "body_encoding": "json",
+        "headers": {
+          "content-type": "application/json",
+          "date": "Thu, 15 Oct 2026 09:42:30 GMT",
+          "request-id": "req_mock_0001",
+          "server": "BaseHTTP/0.6 Python/3.12.14",
+          "x-replex-mock": "true"
+        },
+        "status": 200,
+        "stream": null
+      },
+      "type": "exchange"
+    },
+    {
+      "args": {
+        "order_id": "1042"
+      },
+      "duration_ms": 0,
+      "error": null,
+      "index": 1,
+      "lossy": false,
+      "name": "get_order",
+      "result": {
+        "amount": 129.0,
+        "category": "footwear",
+        "currency": "EUR",
+        "customer_email": "[REDACTED_EMAIL_1]",
+        "days_since_delivery": 12,
+        "item": "Trail running shoes",
+        "order_id": "1042",
+        "status": "delivered"
+      },
+      "type": "tool_call"
+    },
+    {
+      "duration_ms": 0,
+      "index": 2,
+      "request": {
+        "body": {
+          "max_tokens": 1024,
+          "messages": [
+            {
+              "content": "Hi, I'd like a refund for order 1042 please, the shoes don't fit. My ticket is [REDACTED_TICKET_1], you can reach me at [REDACTED_EMAIL_1].",
+              "role": "user"
+            },
+            {
+              "content": [
+                {
+                  "id": "toolu_mock_0001_1",
+                  "input": {
+                    "order_id": "1042"
+                  },
+                  "name": "get_order",
+                  "type": "tool_use"
+                }
+              ],
+              "role": "assistant"
+            },
+            {
+              "content": [
+                {
+                  "content": "{\"amount\": 129.0, \"category\": \"footwear\", \"currency\": \"EUR\", \"customer_email\": \"[REDACTED_EMAIL_1]\", \"days_since_delivery\": 12, \"item\": \"Trail running shoes\", \"order_id\": \"1042\", \"status\": \"delivered\"}",
+                  "tool_use_id": "toolu_mock_0001_1",
+                  "type": "tool_result"
+                }
+              ],
+              "role": "user"
+            }
+          ],
+          "model": "mock-sonnet",
+          "system": "You are the fast, friendly customer support agent for Acme Outdoor. Customers hate waiting.\nLook up the order with get_order. If you need policy details, use search_docs, then act right away without extra checks.\nReply with a single JSON object and nothing else: {\"decision\": \"refund_requested\" | \"refund_denied\" | \"info\", \"refund_id\": string or null, \"message\": \"<one short paragraph for the customer>\"}.",
+          "tools": [
+            {
+              "description": "Look up an order by its id.",
+              "input_schema": {
+                "properties": {
+                  "order_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "order_id"
+                ],
+                "type": "object"
+              },
+              "name": "get_order"
+            },
+            {
+              "description": "Check whether an order is eligible for a refund.",
+              "input_schema": {
+                "properties": {
+                  "category": {
+                    "type": "string"
+                  },
+                  "days_since_delivery": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "category",
+                  "days_since_delivery"
+                ],
+                "type": "object"
+              },
+              "name": "check_refund_policy"
+            },
+            {
+              "description": "Create a refund request for an order.",
+              "input_schema": {
+                "properties": {
+                  "amount": {
+                    "type": "number"
+                  },
+                  "order_id": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "order_id",
+                  "amount",
+                  "reason"
+                ],
+                "type": "object"
+              },
+              "name": "create_refund_request"
+            },
+            {
+              "description": "Search the help-centre articles.",
+              "input_schema": {
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "query"
+                ],
+                "type": "object"
+              },
+              "name": "search_docs"
+            }
+          ]
+        },
+        "body_encoding": "json",
+        "headers": {
+          "accept": "*/*",
+          "accept-encoding": "identity",
+          "anthropic-version": "2023-06-01",
+          "connection": "keep-alive",
+          "content-length": "1963",
+          "content-type": "application/json",
+          "host": "127.0.0.1:64939",
+          "user-agent": "python-httpx/0.28.1",
+          "x-api-key": "[REDACTED]"
+        },
+        "match_key": "sha256:b65f249bdad99b9d2fdba5213cfec21ecfeee2cfaf9513ffe8c9fd93667a16dd",
+        "method": "POST",
+        "url": "http://127.0.0.1:64939/v1/messages"
+      },
+      "response": {
+        "body": {
+          "content": [
+            {
+              "id": "toolu_mock_0002_1",
+              "input": {
+                "query": "refund window"
+              },
+              "name": "search_docs",
+              "type": "tool_use"
+            }
+          ],
+          "id": "msg_mock_0002",
+          "model": "mock-sonnet",
+          "role": "assistant",
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "type": "message",
+          "usage": {
+            "input_tokens": 260,
+            "output_tokens": 7
+          }
+        },
+        "body_encoding": "json",
+        "headers": {
+          "content-type": "application/json",
+          "date": "Thu, 15 Oct 2026 09:42:30 GMT",
+          "request-id": "req_mock_0002",
+          "server": "BaseHTTP/0.6 Python/3.12.14",
+          "x-replex-mock": "true"
+        },
+        "status": 200,
+        "stream": null
+      },
+      "type": "exchange"
+    },
+    {
+      "args": {
+        "query": "refund window"
+      },
+      "duration_ms": 0,
+      "error": null,
+      "index": 3,
+      "lossy": false,
+      "name": "search_docs",
+      "result": [
+        "Refund window: items can be returned for a full refund within 30 days of delivery.",
+        "Electronics must be unopened to qualify for a refund."
+      ],
+      "type": "tool_call"
+    },
+    {
+      "duration_ms": 0,
+      "index": 4,
+      "request": {
+        "body": {
+          "max_tokens": 1024,
+          "messages": [
+            {
+              "content": "Hi, I'd like a refund for order 1042 please, the shoes don't fit. My ticket is [REDACTED_TICKET_1], you can reach me at [REDACTED_EMAIL_1].",
+              "role": "user"
+            },
+            {
+              "content": [
+                {
+                  "id": "toolu_mock_0001_1",
+                  "input": {
+                    "order_id": "1042"
+                  },
+                  "name": "get_order",
+                  "type": "tool_use"
+                }
+              ],
+              "role": "assistant"
+            },
+            {
+              "content": [
+                {
+                  "content": "{\"amount\": 129.0, \"category\": \"footwear\", \"currency\": \"EUR\", \"customer_email\": \"[REDACTED_EMAIL_1]\", \"days_since_delivery\": 12, \"item\": \"Trail running shoes\", \"order_id\": \"1042\", \"status\": \"delivered\"}",
+                  "tool_use_id": "toolu_mock_0001_1",
+                  "type": "tool_result"
+                }
+              ],
+              "role": "user"
+            },
+            {
+              "content": [
+                {
+                  "id": "toolu_mock_0002_1",
+                  "input": {
+                    "query": "refund window"
+                  },
+                  "name": "search_docs",
+                  "type": "tool_use"
+                }
+              ],
+              "role": "assistant"
+            },
+            {
+              "content": [
+                {
+                  "content": "[\"Refund window: items can be returned for a full refund within 30 days of delivery.\", \"Electronics must be unopened to qualify for a refund.\"]",
+                  "tool_use_id": "toolu_mock_0002_1",
+                  "type": "tool_result"
+                }
+              ],
+              "role": "user"
+            }
+          ],
+          "model": "mock-sonnet",
+          "system": "You are the fast, friendly customer support agent for Acme Outdoor. Customers hate waiting.\nLook up the order with get_order. If you need policy details, use search_docs, then act right away without extra checks.\nReply with a single JSON object and nothing else: {\"decision\": \"refund_requested\" | \"refund_denied\" | \"info\", \"refund_id\": string or null, \"message\": \"<one short paragraph for the customer>\"}.",
+          "tools": [
+            {
+              "description": "Look up an order by its id.",
+              "input_schema": {
+                "properties": {
+                  "order_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "order_id"
+                ],
+                "type": "object"
+              },
+              "name": "get_order"
+            },
+            {
+              "description": "Check whether an order is eligible for a refund.",
+              "input_schema": {
+                "properties": {
+                  "category": {
+                    "type": "string"
+                  },
+                  "days_since_delivery": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "category",
+                  "days_since_delivery"
+                ],
+                "type": "object"
+              },
+              "name": "check_refund_policy"
+            },
+            {
+              "description": "Create a refund request for an order.",
+              "input_schema": {
+                "properties": {
+                  "amount": {
+                    "type": "number"
+                  },
+                  "order_id": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "order_id",
+                  "amount",
+                  "reason"
+                ],
+                "type": "object"
+              },
+              "name": "create_refund_request"
+            },
+            {
+              "description": "Search the help-centre articles.",
+              "input_schema": {
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "query"
+                ],
+                "type": "object"
+              },
+              "name": "search_docs"
+            }
+          ]
+        },
+        "body_encoding": "json",
+        "headers": {
+          "accept": "*/*",
+          "accept-encoding": "identity",
+          "anthropic-version": "2023-06-01",
+          "connection": "keep-alive",
+          "content-length": "2341",
+          "content-type": "application/json",
+          "host": "127.0.0.1:64939",
+          "user-agent": "python-httpx/0.28.1",
+          "x-api-key": "[REDACTED]"
+        },
+        "match_key": "sha256:585832c9d509d9c6c1f65915631ed7ae22eefcb5556e04a58f5a543d8eb2a9ea",
+        "method": "POST",
+        "url": "http://127.0.0.1:64939/v1/messages"
+      },
+      "response": {
+        "body": {
+          "content": [
+            {
+              "id": "toolu_mock_0003_1",
+              "input": {
+                "amount": 129.0,
+                "order_id": "1042",
+                "reason": "Customer requested a refund"
+              },
+              "name": "create_refund_request",
+              "type": "tool_use"
+            }
+          ],
+          "id": "msg_mock_0003",
+          "model": "mock-sonnet",
+          "role": "assistant",
+          "stop_reason": "tool_use",
+          "stop_sequence": null,
+          "type": "message",
+          "usage": {
+            "input_tokens": 360,
+            "output_tokens": 20
+          }
+        },
+        "body_encoding": "json",
+        "headers": {
+          "content-type": "application/json",
+          "date": "Thu, 15 Oct 2026 09:42:30 GMT",
+          "request-id": "req_mock_0003",
+          "server": "BaseHTTP/0.6 Python/3.12.14",
+          "x-replex-mock": "true"
+        },
+        "status": 200,
+        "stream": null
+      },
+      "type": "exchange"
+    },
+    {
+      "args": {
+        "amount": 129.0,
+        "order_id": "1042",
+        "reason": "Customer requested a refund"
+      },
+      "duration_ms": 0,
+      "error": null,
+      "index": 5,
+      "lossy": false,
+      "name": "create_refund_request",
+      "result": {
+        "amount": 129.0,
+        "order_id": "1042",
+        "reason": "Customer requested a refund",
+        "refund_id": "RF-1042",
+        "status": "requested"
+      },
+      "type": "tool_call"
+    },
+    {
+      "duration_ms": 0,
+      "index": 6,
+      "request": {
+        "body": {
+          "max_tokens": 1024,
+          "messages": [
+            {
+              "content": "Hi, I'd like a refund for order 1042 please, the shoes don't fit. My ticket is [REDACTED_TICKET_1], you can reach me at [REDACTED_EMAIL_1].",
+              "role": "user"
+            },
+            {
+              "content": [
+                {
+                  "id": "toolu_mock_0001_1",
+                  "input": {
+                    "order_id": "1042"
+                  },
+                  "name": "get_order",
+                  "type": "tool_use"
+                }
+              ],
+              "role": "assistant"
+            },
+            {
+              "content": [
+                {
+                  "content": "{\"amount\": 129.0, \"category\": \"footwear\", \"currency\": \"EUR\", \"customer_email\": \"[REDACTED_EMAIL_1]\", \"days_since_delivery\": 12, \"item\": \"Trail running shoes\", \"order_id\": \"1042\", \"status\": \"delivered\"}",
+                  "tool_use_id": "toolu_mock_0001_1",
+                  "type": "tool_result"
+                }
+              ],
+              "role": "user"
+            },
+            {
+              "content": [
+                {
+                  "id": "toolu_mock_0002_1",
+                  "input": {
+                    "query": "refund window"
+                  },
+                  "name": "search_docs",
+                  "type": "tool_use"
+                }
+              ],
+              "role": "assistant"
+            },
+            {
+              "content": [
+                {
+                  "content": "[\"Refund window: items can be returned for a full refund within 30 days of delivery.\", \"Electronics must be unopened to qualify for a refund.\"]",
+                  "tool_use_id": "toolu_mock_0002_1",
+                  "type": "tool_result"
+                }
+              ],
+              "role": "user"
+            },
+            {
+              "content": [
+                {
+                  "id": "toolu_mock_0003_1",
+                  "input": {
+                    "amount": 129.0,
+                    "order_id": "1042",
+                    "reason": "Customer requested a refund"
+                  },
+                  "name": "create_refund_request",
+                  "type": "tool_use"
+                }
+              ],
+              "role": "assistant"
+            },
+            {
+              "content": [
+                {
+                  "content": "{\"amount\": 129.0, \"order_id\": \"1042\", \"reason\": \"Customer requested a refund\", \"refund_id\": \"RF-1042\", \"status\": \"requested\"}",
+                  "tool_use_id": "toolu_mock_0003_1",
+                  "type": "tool_result"
+                }
+              ],
+              "role": "user"
+            }
+          ],
+          "model": "mock-sonnet",
+          "system": "You are the fast, friendly customer support agent for Acme Outdoor. Customers hate waiting.\nLook up the order with get_order. If you need policy details, use search_docs, then act right away without extra checks.\nReply with a single JSON object and nothing else: {\"decision\": \"refund_requested\" | \"refund_denied\" | \"info\", \"refund_id\": string or null, \"message\": \"<one short paragraph for the customer>\"}.",
+          "tools": [
+            {
+              "description": "Look up an order by its id.",
+              "input_schema": {
+                "properties": {
+                  "order_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "order_id"
+                ],
+                "type": "object"
+              },
+              "name": "get_order"
+            },
+            {
+              "description": "Check whether an order is eligible for a refund.",
+              "input_schema": {
+                "properties": {
+                  "category": {
+                    "type": "string"
+                  },
+                  "days_since_delivery": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "category",
+                  "days_since_delivery"
+                ],
+                "type": "object"
+              },
+              "name": "check_refund_policy"
+            },
+            {
+              "description": "Create a refund request for an order.",
+              "input_schema": {
+                "properties": {
+                  "amount": {
+                    "type": "number"
+                  },
+                  "order_id": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "order_id",
+                  "amount",
+                  "reason"
+                ],
+                "type": "object"
+              },
+              "name": "create_refund_request"
+            },
+            {
+              "description": "Search the help-centre articles.",
+              "input_schema": {
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "query"
+                ],
+                "type": "object"
+              },
+              "name": "search_docs"
+            }
+          ]
+        },
+        "body_encoding": "json",
+        "headers": {
+          "accept": "*/*",
+          "accept-encoding": "identity",
+          "anthropic-version": "2023-06-01",
+          "connection": "keep-alive",
+          "content-length": "2773",
+          "content-type": "application/json",
+          "host": "127.0.0.1:64939",
+          "user-agent": "python-httpx/0.28.1",
+          "x-api-key": "[REDACTED]"
+        },
+        "match_key": "sha256:7569eb6da4d927592800ff7226b6bb7dd5f2a091c611dbbe8fd0dd3c458dfcf2",
+        "method": "POST",
+        "url": "http://127.0.0.1:64939/v1/messages"
+      },
+      "response": {
+        "body": {
+          "content": [
+            {
+              "text": "{\"decision\": \"refund_requested\", \"refund_id\": \"RF-1042\", \"message\": \"Done! Refund RF-1042 is on its way for your Trail running shoes.\"}",
+              "type": "text"
+            }
+          ],
+          "id": "msg_mock_0004",
+          "model": "mock-sonnet",
+          "role": "assistant",
+          "stop_reason": "end_turn",
+          "stop_sequence": null,
+          "type": "message",
+          "usage": {
+            "input_tokens": 474,
+            "output_tokens": 34
+          }
+        },
+        "body_encoding": "json",
+        "headers": {
+          "content-type": "application/json",
+          "date": "Thu, 15 Oct 2026 09:42:30 GMT",
+          "request-id": "req_mock_0004",
+          "server": "BaseHTTP/0.6 Python/3.12.14",
+          "x-replex-mock": "true"
+        },
+        "status": 200,
+        "stream": null
+      },
+      "type": "exchange"
+    }
+  ],
+  "meta": {
+    "git_sha": "3e7dbd0",
+    "model": "mock-sonnet",
+    "provider": "mock",
+    "tags": []
+  },
+  "name": "refund_request",
+  "replex_version": "0.1.0",
+  "schema_version": 1,
+  "usage": {
+    "input_tokens": 1236,
+    "output_tokens": 66
+  }
+}

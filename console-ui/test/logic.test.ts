@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { detectSource, splitRunId, staticSource, summarise } from "../src/api";
+import { detectReport, serverSource, splitRunId, staticSource, summarise } from "../src/api";
+import { explain, headline, humanize, scenarios, verdictOf } from "../src/explain";
 import { filterRuns, formatDate, formatMs, formatTokens, inlineJson, lastMessageText, stepSubtitle, stepTitle, truncate } from "../src/format";
 import { href, parseRoute, type Route } from "../src/router";
 import { readableDiff, tokenize, wordDiff } from "../src/textdiff";
@@ -13,15 +14,17 @@ describe("router", () => {
     { view: "run", id: "candidate:a/b", step: 3 },
     { view: "compare", a: "baseline:x", b: "candidate:x", step: 2 },
     { view: "compare", a: null, b: null, step: null },
-    { view: "drift-index" },
-    { view: "drift", name: "refund request" },
+    { view: "overview" },
+    { view: "scenario", name: "refund request" },
   ];
   it.each(routes)("round-trips %o", (route) => {
     expect(parseRoute(href(route))).toEqual(route);
   });
-  it("defaults to runs and ignores bad steps", () => {
-    expect(parseRoute("")).toEqual({ view: "runs", q: "" });
-    expect(parseRoute("#/nonsense")).toEqual({ view: "runs", q: "" });
+  it("defaults to the overview, keeps old drift links working and ignores bad steps", () => {
+    expect(parseRoute("")).toEqual({ view: "overview" });
+    expect(parseRoute("#/nonsense")).toEqual({ view: "overview" });
+    expect(parseRoute("#/drift")).toEqual({ view: "overview" });
+    expect(parseRoute("#/drift/refund_request")).toEqual({ view: "scenario", name: "refund_request" });
     expect(parseRoute("#/run/baseline/x?step=-1")).toEqual({ view: "run", id: "baseline:x", step: null });
     expect(parseRoute("#/run/baseline/x?step=abc")).toEqual({ view: "run", id: "baseline:x", step: null });
   });
@@ -42,7 +45,7 @@ describe("format", () => {
   });
   it("describes steps", () => {
     const t = trace("x", ["get_order"]);
-    expect(stepTitle(t.steps[0]!)).toBe("requests get_order");
+    expect(stepTitle(t.steps[0]!)).toBe("Asks for get_order");
     expect(stepTitle(t.steps[1]!)).toBe("get_order");
     expect(stepSubtitle(t.steps[1]!)).toBe('{"order_id":"1042"}');
     expect(stepSubtitle(t.steps[2]!)).toBe("Done.");
@@ -104,11 +107,44 @@ describe("data sources", () => {
     expect((await source.drift("refund_request")).report.passed).toBe(false);
     await expect(source.drift("x")).rejects.toThrow();
   });
-  it("detects inlined data, otherwise uses the server", () => {
+  it("detects inlined report data, otherwise defers to the server", () => {
     const withData = { getElementById: () => ({ textContent: JSON.stringify(payload()) }) } as unknown as Document;
-    expect(detectSource(withData).mode).toBe("static");
+    expect(detectReport(withData)?.mode).toBe("static");
     const without = { getElementById: () => null } as unknown as Document;
-    expect(detectSource(without).mode).toBe("server");
+    expect(detectReport(without)).toBeNull();
+  });
+  it("scopes server requests to the chosen workspace", async () => {
+    const urls: string[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (url: string) => {
+      urls.push(url);
+      return new Response(JSON.stringify({ runs: [], trace: {} }), { status: 200 });
+    }) as typeof fetch;
+    try {
+      const source = serverSource({
+        id: "sample",
+        label: "Sample workspace",
+        baseline_dir: "b",
+        candidate_dir: "c",
+        policy: null,
+        baselines: 0,
+        candidates: 0,
+        writable: false,
+      });
+      expect(source.workspace).toBe("sample");
+      await source.runs();
+      await source.run("candidate:refund request");
+      await source.drift("refund_request");
+      await source.compare("baseline:a", "candidate:a");
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+    expect(urls).toEqual([
+      "/api/w/sample/runs",
+      "/api/w/sample/runs/candidate/refund%20request",
+      "/api/w/sample/drift/refund_request",
+      "/api/w/sample/compare?a=baseline%3Aa&b=candidate%3Aa",
+    ]);
   });
   it("splits ids and summarises traces without executed tools", () => {
     expect(splitRunId("candidate:a:b")).toEqual({ kind: "candidate", name: "a:b" });
@@ -116,5 +152,78 @@ describe("data sources", () => {
     const t = trace("x", ["a"]);
     t.steps = t.steps.filter((s) => s.kind === "model");
     expect(summarise("baseline:x", t, null).tool_names).toEqual(["a"]);
+  });
+});
+
+describe("explain", () => {
+  const finding = (check: string, severity: "fail" | "warn" | "info", before: unknown, after: unknown, message = "") => ({
+    check,
+    severity,
+    message,
+    step_index: 1,
+    before,
+    after,
+  });
+  const report = (findings: ReturnType<typeof finding>[], passed = !findings.some((f) => f.severity === "fail")) => ({
+    ...payload().pairs[0]!.report,
+    passed,
+    findings,
+  });
+
+  it("names scenarios for people", () => {
+    expect(humanize("refund_ineligible_openai")).toBe("Refund ineligible openai");
+    expect(humanize("order-status")).toBe("Order status");
+    expect(humanize("")).toBe("");
+  });
+  it("says which tools the agent stopped and started calling, once", () => {
+    const r = report([
+      finding("tool_sequence", "fail", ["get_order", "check_refund_policy"], ["get_order", "search_docs"]),
+      finding("new_tools", "fail", ["check_refund_policy", "get_order"], ["search_docs"]),
+      finding("latency", "info", 1, 2),
+    ]);
+    expect(explain(r)).toEqual(["Stopped calling check_refund_policy and started calling search_docs."]);
+    expect(verdictOf(r)).toBe("changed");
+    expect(headline(r)).toBe("Stopped calling check_refund_policy and started calling search_docs.");
+  });
+  it("covers every policy check in plain words", () => {
+    const r = report([
+      finding("tool_sequence", "fail", ["a", "b"], ["b", "a"]),
+      finding("new_tools", "warn", [], ["c", "d", "e"]),
+      finding("forbidden_tools", "fail", null, "delete_order"),
+      finding("tool_args", "fail", { id: 1 }, { id: 2 }, "arguments of 'get_order' changed"),
+      finding("final_output", "warn", "a", "b", "final output similarity 0.73 is below 0.80"),
+      finding("steps", "warn", 5, 8),
+      finding("tokens", "warn", 100, 180),
+    ]);
+    expect(explain(r)).toEqual([
+      "Calls the same tools in a different order.",
+      "Called delete_order, which the policy forbids.",
+      "Calls get_order with different arguments.",
+      "The final answer is worded differently (73% similar).",
+      "Takes 8 steps where it used to take 5.",
+      "Uses 80% more tokens.",
+    ]);
+    const alone = report([finding("new_tools", "fail", [], ["c", "d", "e"])]);
+    expect(explain(alone)).toEqual(["Started calling c, d and e."]);
+    const format = report([finding("final_output", "fail", "{}", "hi", "candidate final output is not valid JSON (json_schema)")]);
+    expect(explain(format)).toEqual(["The final answer no longer has the required format."]);
+  });
+  it("gives a verdict for every state", () => {
+    expect(verdictOf(null)).toBe("pending");
+    expect(verdictOf(report([]))).toBe("same");
+    expect(verdictOf(report([finding("steps", "warn", 5, 8)]))).toBe("minor");
+    expect(headline(null)).toMatch(/not re-run/);
+    expect(headline(report([]))).toMatch(/same thing/);
+  });
+  it("groups runs into scenarios, the ones needing review first", () => {
+    const list = scenarios([
+      { id: "baseline:b", kind: "baseline", name: "b" },
+      { id: "baseline:a", kind: "baseline", name: "a" },
+      { id: "candidate:a", kind: "candidate", name: "a", drift: "passed" },
+      { id: "baseline:c", kind: "baseline", name: "c" },
+      { id: "candidate:c", kind: "candidate", name: "c", drift: "failed" },
+    ]);
+    expect(list.map((s) => s.name)).toEqual(["c", "a", "b"]);
+    expect(list[2]!.candidate).toBeNull();
   });
 });

@@ -1,8 +1,10 @@
-"""The local, read-only console: a small FastAPI app over the cassette directories.
+"""The local, read-only console: a small FastAPI app over one or more workspaces.
 
-It binds to 127.0.0.1 by default, has no authentication, makes no external requests and sends
-no telemetry. It only ever reads cassettes, which are already redacted, so the console never
-has access to original secrets.
+A workspace is a baseline directory, a candidate directory and a policy. The console serves
+your project's workspace and a bundled sample one. In your project it can also accept a
+candidate as the new baseline, or discard it; everything else is read-only. It binds to
+127.0.0.1 by default, has no authentication, makes no external requests and sends no
+telemetry. Cassettes are redacted before they are written, so the console never sees secrets.
 """
 
 from __future__ import annotations
@@ -12,9 +14,9 @@ import webbrowser
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -26,11 +28,13 @@ from replex.cassette.storage import (
     list_cassettes,
     load,
     name_from_path,
+    promote_candidate,
     sanitise_name,
 )
+from replex.config import check_ci_guard
 from replex.drift.compare import DriftReport, compare
 from replex.drift.policy import Policy, load_policy
-from replex.errors import ReplexError
+from replex.errors import RecordingRefused, ReplexError
 from replex.providers import build_trace
 from replex.trace.model import Trace
 
@@ -38,7 +42,7 @@ STATIC = Path(__file__).parent / "static"
 # Requests must name the console by a loopback host. Without this check a web page could use
 # DNS rebinding to point its own hostname at 127.0.0.1 and read the cassettes.
 LOCAL_HOSTS = ("127.0.0.1", "localhost", "::1", "[::1]")
-Kind = Literal["baseline", "candidate"]
+ACTION_HEADER = "x-replex-action"
 CSP = (
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
     "img-src 'self' data:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'"
@@ -156,19 +160,92 @@ def _split(run_id: str) -> tuple[str, str]:
     return kind, name
 
 
+@dataclass(frozen=True)
+class Workspace:
+    """A set of baselines, candidates and a policy that the console can show.
+
+    ``project`` is your own repository (from ``[tool.replex]`` or the command line);
+    ``sample`` is the example that ships inside the package, so the console has something to
+    show before you have recorded anything.
+    """
+
+    id: str
+    label: str
+    baseline_dir: Path
+    candidate_dir: Path
+    policy_path: Path | None = None
+    #: Whether the console may accept or discard candidates here (never for the sample).
+    writable: bool = False
+
+    def describe(self) -> dict[str, Any]:
+        baselines = list_cassettes(self.baseline_dir)
+        candidates = list_cassettes(self.candidate_dir)
+        return {
+            "id": self.id,
+            "label": self.label,
+            "baseline_dir": str(self.baseline_dir),
+            "candidate_dir": str(self.candidate_dir),
+            "policy": str(self.policy_path) if self.policy_path else None,
+            "baselines": len(baselines),
+            "candidates": len(candidates),
+            "writable": self.writable,
+        }
+
+
+SAMPLE = Path(__file__).parent / "sample"
+
+
+def sample_workspace() -> Workspace:
+    """The bundled example: a support agent whose prompt change drifts in two scenarios."""
+    return Workspace(
+        id="sample",
+        label="Sample workspace",
+        baseline_dir=SAMPLE / "cassettes",
+        candidate_dir=SAMPLE / "candidates",
+        policy_path=SAMPLE / "replex.policy.yaml",
+    )
+
+
+def project_workspace(
+    baseline_dir: Path, candidate_dir: Path, policy_path: Path | None = None
+) -> Workspace:
+    """Your own cassettes, read live from disk."""
+    return Workspace(
+        id="project",
+        label="Your project",
+        baseline_dir=Path(baseline_dir),
+        candidate_dir=Path(candidate_dir),
+        policy_path=policy_path,
+        writable=True,
+    )
+
+
+def default_workspace(workspaces: Sequence[Workspace]) -> str:
+    """The project when it has cassettes, otherwise the first workspace that does."""
+    for ws in workspaces:
+        if list_cassettes(ws.baseline_dir) or list_cassettes(ws.candidate_dir):
+            return ws.id
+    return workspaces[0].id
+
+
 def create_app(
-    baseline_dir: Path,
-    candidate_dir: Path,
-    policy_path: Path | None = None,
+    workspaces: Sequence[Workspace],
     *,
     allowed_hosts: Sequence[str] = LOCAL_HOSTS,
 ) -> FastAPI:
     """Build the console application.
 
     Args:
+        workspaces: What the console can show, in the order offered to the user.
         allowed_hosts: Host header values the console answers to (``*`` disables the check).
     """
-    store = _Store(Path(baseline_dir), Path(candidate_dir), policy_path)
+    if not workspaces:
+        raise ValueError("the console needs at least one workspace")
+    by_id = {ws.id: ws for ws in workspaces}
+    stores = {
+        ws.id: _Store(Path(ws.baseline_dir), Path(ws.candidate_dir), ws.policy_path)
+        for ws in workspaces
+    }
     app = FastAPI(
         title="RepleX console", version=__version__, docs_url=None, redoc_url=None, openapi_url=None
     )
@@ -180,25 +257,55 @@ def create_app(
         response.headers["content-security-policy"] = CSP
         response.headers["x-content-type-options"] = "nosniff"
         response.headers["referrer-policy"] = "no-referrer"
+        # Revalidate on every load, so the browser never keeps an old console after an upgrade
+        # and API responses always reflect the files on disk.
+        response.headers["cache-control"] = "no-cache"
         return response
+
+    def store_for(ws: str) -> _Store:
+        store = stores.get(ws)
+        if store is None:
+            raise HTTPException(404, f"no workspace named {ws!r}")
+        return store
+
+    def writable_store(ws: str, request: Request) -> _Store:
+        """Guards for the two write actions.
+
+        The custom header cannot be sent cross-origin without a CORS preflight, which this
+        server never approves, so another website cannot trigger a write even on localhost.
+        """
+        if request.headers.get(ACTION_HEADER) != "1":
+            raise HTTPException(403, f"write requests need the {ACTION_HEADER} header")
+        store = store_for(ws)
+        if not by_id[ws].writable:
+            raise HTTPException(403, f"the {by_id[ws].label.lower()} is read-only")
+        try:
+            check_ci_guard("rewrite")
+        except RecordingRefused as exc:
+            raise HTTPException(409, str(exc)) from exc
+        return store
 
     @app.get("/api/health")
     def health() -> dict[str, Any]:
+        return {"ok": True, "version": __version__}
+
+    @app.get("/api/workspaces")
+    def list_workspaces() -> dict[str, Any]:
         return {
-            "ok": True,
-            "version": __version__,
-            "baseline_dir": str(store.baseline_dir),
-            "candidate_dir": str(store.candidate_dir),
+            "workspaces": [ws.describe() for ws in workspaces],
+            "default": default_workspace(workspaces),
         }
 
-    @app.get("/api/runs")
-    def runs() -> dict[str, Any]:
+    @app.get("/api/w/{ws}/runs")
+    def runs(ws: str) -> dict[str, Any]:
+        store = store_for(ws)
         rows = [_summary(store, "baseline", p) for p in list_cassettes(store.baseline_dir)]
         rows += [_summary(store, "candidate", p) for p in list_cassettes(store.candidate_dir)]
         return {"runs": rows}
 
-    @app.get("/api/runs/{kind}/{name}")
-    def run(kind: str, name: str) -> dict[str, Any]:
+    @app.get("/api/w/{ws}/runs/{kind}/{name}")
+    def run(ws: str, kind: str, name: str) -> dict[str, Any]:
+        store = store_for(ws)
         c = store.cassette(kind, name)
         return {
             "id": f"{kind}:{name}",
@@ -207,8 +314,9 @@ def create_app(
             "trace": store.trace(kind, name).model_dump(mode="json"),
         }
 
-    @app.get("/api/compare")
-    def compare_runs(a: str = Query(...), b: str = Query(...)) -> dict[str, Any]:
+    @app.get("/api/w/{ws}/compare")
+    def compare_runs(ws: str, a: str = Query(...), b: str = Query(...)) -> dict[str, Any]:
+        store = store_for(ws)
         ka, na = _split(a)
         kb, nb = _split(b)
         ta, tb = store.trace(ka, na), store.trace(kb, nb)
@@ -220,8 +328,9 @@ def create_app(
             "report": report.to_dict(),
         }
 
-    @app.get("/api/drift/{name}")
-    def drift(name: str) -> dict[str, Any]:
+    @app.get("/api/w/{ws}/drift/{name}")
+    def drift(ws: str, name: str) -> dict[str, Any]:
+        store = store_for(ws)
         report = store.drift(name)
         if report is None:
             raise HTTPException(404, f"{name!r} needs both a baseline and a candidate")
@@ -231,6 +340,22 @@ def create_app(
             "baseline": store.trace("baseline", name).model_dump(mode="json"),
             "candidate": store.trace("candidate", name).model_dump(mode="json"),
         }
+
+    @app.post("/api/w/{ws}/scenarios/{name}/accept")
+    def accept(ws: str, name: str, request: Request) -> dict[str, Any]:
+        store = writable_store(ws, request)
+        store.path("candidate", name)  # validates the name, 404 when there is nothing to accept
+        try:
+            written = promote_candidate(store.candidate_dir, store.baseline_dir, name)
+        except ReplexError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return {"accepted": name, "baseline": str(written)}
+
+    @app.post("/api/w/{ws}/scenarios/{name}/discard")
+    def discard(ws: str, name: str, request: Request) -> dict[str, Any]:
+        store = writable_store(ws, request)
+        store.path("candidate", name).unlink()
+        return {"discarded": name}
 
     @app.exception_handler(HTTPException)
     async def http_error(_request: Any, exc: HTTPException) -> JSONResponse:
@@ -257,9 +382,7 @@ def create_app(
 
 def serve(
     *,
-    baseline_dir: Path,
-    candidate_dir: Path,
-    policy_path: Path | None,
+    workspaces: Sequence[Workspace],
     host: str = "127.0.0.1",
     port: int = 8765,
     open_browser: bool = True,
@@ -273,14 +396,16 @@ def serve(
             f"Only do this inside a container or on a trusted network."
         )
     url = f"http://{'127.0.0.1' if host in ('0.0.0.0', '::') else host}:{port}/"
-    print(f"RepleX console: {url}  (baselines: {baseline_dir}, candidates: {candidate_dir})")
+    print(f"RepleX console: {url}")
+    for ws in workspaces:
+        print(f"  {ws.label}: {ws.baseline_dir} (candidates: {ws.candidate_dir})")
     if open_browser:
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
     hosts = list(LOCAL_HOSTS)
     if host not in ("0.0.0.0", "::", *LOCAL_HOSTS):
         hosts.append(host)
     uvicorn.run(
-        create_app(baseline_dir, candidate_dir, policy_path, allowed_hosts=hosts),
+        create_app(workspaces, allowed_hosts=hosts),
         host=host,
         port=port,
         log_level="warning",

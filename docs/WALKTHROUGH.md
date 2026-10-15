@@ -148,8 +148,6 @@ replex drift cassettes/refund_ineligible_openai.replex.json \
 | ⚠️ warn | `final_output` | 4 | final output similarity 0.73 is below 0.80 |
 | 💬 info | `latency` |  | latency 1 ms -> 2 ms (+100%) (reported only) |
 
-![Drift report](images/console-drift.png)
-
 Read it top-down:
 
 1. **`tool_sequence` (fail)**: the v2 agent no longer calls `check_refund_policy`. It looks the
@@ -174,21 +172,27 @@ For `refund_request` the consequence is worse: v2 calls `create_refund_request` 
 checking eligibility**. It happens to be eligible in this scenario, but the safety check the
 business relies on is gone. This is the regression that would otherwise reach production.
 
-To explore interactively, with the timeline and the side-by-side compare:
+The console tells the same story in plain language. From `examples/support_agent`:
 
 ```bash
-replex console cassettes --candidates .replex/candidates
+replex console
 ```
 
-![Compare view](images/console-compare.png)
+It opens on an overview that says two scenarios need review, with one sentence each about what
+changed. Each scenario's review page shows the two runs side by side and step by step:
+
+![Reviewing refund_request](images/console-scenario.png)
+
+![The aligned step-by-step diff](images/console-compare.png)
 
 ## Step 5: decide
 
 **The change is wrong** (it is, here): fix the prompt, run the drift check again until it
 passes, and delete `.replex/`. The baselines never changed.
 
-**The change is right**: promote the candidates to baselines and commit them, so the pull
-request shows the behaviour change as a cassette diff for review:
+**The change is right**: accept it. In the console, choose **Accept new behaviour** on each
+scenario's review page. Or from the command line, promote the candidates to baselines. Either
+way, commit them, so the pull request shows the behaviour change as a cassette diff for review:
 
 ```bash
 replex approve refund_request

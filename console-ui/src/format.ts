@@ -35,14 +35,14 @@ export function inlineJson(value: unknown, max = 80): string {
 
 export function stepTitle(step: Step): string {
   if (step.kind === "tool") return step.name;
-  if (step.tool_requests.length) return `requests ${step.tool_requests.map((r) => r.name).join(", ")}`;
-  if (step.error) return "error";
-  return step.text ? "reply" : step.stop_reason;
+  if (step.tool_requests.length) return `Asks for ${step.tool_requests.map((r) => r.name).join(", ")}`;
+  if (step.error) return "Error";
+  return step.text ? "Replies" : step.stop_reason;
 }
 
 export function stepSubtitle(step: Step): string {
   if (step.kind === "tool") {
-    return step.error ? `✗ ${step.error}` : inlineJson(step.args, 90);
+    return step.error ? step.error : inlineJson(step.args, 90);
   }
   if (step.error) return step.error;
   return step.text ? truncate(step.text.replace(/\s+/g, " "), 110) : `${step.model} · ${step.stop_reason}`;

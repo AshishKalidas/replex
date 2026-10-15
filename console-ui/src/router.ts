@@ -1,11 +1,12 @@
 // Hash routing so the same app works from the server and from a file:// report.
 
 export type Route =
+  | { view: "overview" }
+  | { view: "scenario"; name: string }
   | { view: "runs"; q: string }
   | { view: "run"; id: string; step: number | null }
   | { view: "compare"; a: string | null; b: string | null; step: number | null }
-  | { view: "drift-index" }
-  | { view: "drift"; name: string };
+
 
 function stepParam(params: URLSearchParams): number | null {
   const raw = params.get("step");
@@ -19,21 +20,27 @@ export function parseRoute(hash: string): Route {
   const [path = "", query = ""] = clean.split("?", 2);
   const params = new URLSearchParams(query);
   const parts = path.split("/").filter(Boolean).map(decodeURIComponent);
-  const head = parts[0] ?? "runs";
+  const head = parts[0] ?? "overview";
   if (head === "run" && parts.length >= 3) {
     return { view: "run", id: `${parts[1]}:${parts.slice(2).join("/")}`, step: stepParam(params) };
   }
   if (head === "compare") {
     return { view: "compare", a: params.get("a"), b: params.get("b"), step: stepParam(params) };
   }
-  if (head === "drift") {
-    return parts[1] ? { view: "drift", name: parts.slice(1).join("/") } : { view: "drift-index" };
+  // "drift" is the route older links and reports used for what is now the scenario page.
+  if ((head === "scenario" || head === "drift") && parts[1]) {
+    return { view: "scenario", name: parts.slice(1).join("/") };
   }
-  return { view: "runs", q: params.get("q") ?? "" };
+  if (head === "runs") return { view: "runs", q: params.get("q") ?? "" };
+  return { view: "overview" };
 }
 
 export function href(route: Route): string {
   switch (route.view) {
+    case "overview":
+      return "#/";
+    case "scenario":
+      return `#/scenario/${encodeURIComponent(route.name)}`;
     case "runs":
       return route.q ? `#/runs?${new URLSearchParams({ q: route.q }).toString()}` : "#/runs";
     case "run": {
@@ -51,9 +58,5 @@ export function href(route: Route): string {
       const s = q.toString();
       return s ? `#/compare?${s}` : "#/compare";
     }
-    case "drift-index":
-      return "#/drift";
-    case "drift":
-      return `#/drift/${encodeURIComponent(route.name)}`;
   }
 }

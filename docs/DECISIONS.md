@@ -45,6 +45,12 @@ Design choices worth knowing about, one line each: decision, reason.
 - **The HTML report inlines the same React app and the data as JSON in one file.** One codebase for both, and the report works from a CI artifact with no server.
 - **`replex console` binds 127.0.0.1 and has a `--host` option used only inside containers.** The console has no authentication; a container must listen on its own interface, and compose publishes it on the host's loopback only.
 - **The console only answers requests whose Host header is a loopback name.** Binding to 127.0.0.1 alone does not stop DNS rebinding from a web page.
+- **The console serves two workspaces: your project and a sample that ships in the package.** A first-time user sees the whole review flow before recording anything, and real mode stays one click away.
+- **The console can accept or discard a candidate in your project, and nothing else.** That is the decision a review ends in; recording stays in pytest. The sample is read-only.
+- **Write requests need an `x-replex-action` header and are refused in CI.** A cross-origin page cannot send the header without a CORS preflight the server never approves, and CI must never replace baselines.
+- **The console uses plain words: "recorded run" and "latest run", "behaviour changed" and "behaves as recorded".** The CLI and files keep baseline and candidate; people reviewing a change should not need that vocabulary.
+- **The console re-reads its workspace when the window regains focus, and keeps the current view on screen while it does.** New recordings appear without a reload or a flash of loading states.
+- **The console's design is light-only.** One carefully tuned theme rather than two half-tuned ones.
 - **Long text diffs fall back to a whole before/after replacement when the texts share less than half their words.** A word-level diff of two unrelated answers is unreadable confetti.
 
 ## Example, packaging and tooling

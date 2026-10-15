@@ -22,6 +22,7 @@ from replex.cassette.storage import (
     list_cassettes,
     load,
     name_from_path,
+    promote_candidate,
 )
 from replex.config import Config, check_ci_guard, load_config
 from replex.errors import CassetteError, ReplexError
@@ -351,13 +352,7 @@ def approve_cmd(name: str, as_json: bool) -> None:
     """Promote the drift candidate NAME to be the new baseline."""
     cfg = _config()
     check_ci_guard("rewrite")
-    src = cassette_path(cfg.candidate_path, name)
-    if not src.is_file():
-        raise click.ClickException(f"no candidate {src}; run the drift job first")
-    load(src)  # validate before promoting
-    dst = cassette_path(cfg.cassette_path, name)
-    atomic_write_text(dst, src.read_text(encoding="utf-8"))
-    src.unlink()
+    dst = promote_candidate(cfg.candidate_path, cfg.cassette_path, name)
     if as_json:
         _emit_json({"approved": name, "baseline": str(dst)})
     else:
@@ -376,6 +371,19 @@ def approve_cmd(name: str, as_json: bool) -> None:
     help="drift candidates directory",
 )
 @click.option("--policy", "policy_path", type=click.Path(dir_okay=False), help="policy YAML file")
+@click.option(
+    "--sample",
+    "sample_only",
+    is_flag=True,
+    help="show only the bundled sample workspace (no project needed)",
+)
+@click.option(
+    "--with-sample/--no-sample",
+    "with_sample",
+    default=True,
+    show_default=True,
+    help="also offer the bundled sample workspace next to your project",
+)
 @click.option("--port", default=8765, show_default=True, type=int)
 @click.option(
     "--host",
@@ -389,22 +397,37 @@ def console_cmd(
     directory: Path | None,
     candidate_dir: Path | None,
     policy_path: str | None,
+    sample_only: bool,
+    with_sample: bool,
     port: int,
     host: str,
     open_browser: bool,
 ) -> None:
-    """Serve the local read-only console for DIRECTORY (needs replex[console])."""
+    """Serve the local read-only console for your project's cassettes (needs replex[console]).
+
+    DIRECTORY defaults to the configured cassette_dir. The bundled sample workspace is offered
+    next to it, so there is always something to explore.
+    """
     try:
-        from replex.console.server import serve
+        from replex.console.server import project_workspace, sample_workspace, serve
     except ImportError as exc:  # pragma: no cover - depends on the optional extra
         raise click.ClickException(
             "the console needs the optional extra: pip install 'replex[console]'"
         ) from exc
-    cfg = _config()
+    workspaces = []
+    if not sample_only:
+        cfg = _config()
+        workspaces.append(
+            project_workspace(
+                directory or cfg.cassette_path,
+                candidate_dir or cfg.candidate_path,
+                Path(policy_path) if policy_path else cfg.policy_path,
+            )
+        )
+    if sample_only or with_sample:
+        workspaces.append(sample_workspace())
     serve(  # pragma: no cover - long-running server
-        baseline_dir=directory or cfg.cassette_path,
-        candidate_dir=candidate_dir or cfg.candidate_path,
-        policy_path=Path(policy_path) if policy_path else cfg.policy_path,
+        workspaces=workspaces,
         host=host,
         port=port,
         open_browser=open_browser and not os.environ.get("CI"),

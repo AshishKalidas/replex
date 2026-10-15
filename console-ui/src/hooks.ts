@@ -6,12 +6,15 @@ export type Async<T> =
   | { state: "error"; error: string }
   | { state: "ready"; data: T };
 
-/** Run an async loader whenever its dependencies change. */
+/**
+ * Run an async loader whenever its dependencies change. Data already on screen stays there
+ * while it is re-read, so a background refresh never flashes a loading state.
+ */
 export function useAsync<T>(load: () => Promise<T>, deps: unknown[]): Async<T> {
   const [value, setValue] = useState<Async<T>>({ state: "loading" });
   useEffect(() => {
     let alive = true;
-    setValue({ state: "loading" });
+    setValue((prev) => (prev.state === "ready" ? prev : { state: "loading" }));
     load().then(
       (data) => alive && setValue({ state: "ready", data }),
       (err: unknown) => alive && setValue({ state: "error", error: err instanceof Error ? err.message : String(err) }),
@@ -82,12 +85,19 @@ export function useKeyNav(
       }
       if (next !== null) {
         e.preventDefault();
+        // The highlight is a keyboard affordance: show it only while the keyboard is in use.
+        document.documentElement.classList.add("using-keys");
         setActive(next);
         scrollTo(next);
       }
     };
+    const onPointer = () => document.documentElement.classList.remove("using-keys");
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("pointermove", onPointer);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointermove", onPointer);
+    };
   }, [count, active, scrollTo]);
 
   return [active, setActive];

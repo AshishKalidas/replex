@@ -1,6 +1,6 @@
 import { formatMs, lastMessageText, stepSubtitle, stepTitle } from "../format";
 import type { Step } from "../types";
-import { Collapsible, JsonBlock, Pill } from "./common";
+import { Collapsible, JsonBlock, Status, StepIcon } from "./common";
 
 interface Props {
   step: Step;
@@ -31,20 +31,18 @@ export function StepCard({ step, active, expanded, onToggle, onFocus, navIndex, 
         aria-expanded={expanded}
       >
         <span className="step-index">{step.index}</span>
-        <span className={`step-icon icon-${step.kind}`} aria-hidden="true">
-          {isTool ? "⚙" : "◆"}
-        </span>
+        <StepIcon kind={step.kind} />
         <span className="step-main">
           <span className="step-title">
             {isTool ? <code>{stepTitle(step)}</code> : stepTitle(step)}
-            {step.error && <Pill tone="fail">error</Pill>}
+            {step.error && <Status tone="fail">Error</Status>}
           </span>
           <span className="step-sub">{stepSubtitle(step)}</span>
         </span>
         <span className="step-meta">
           {step.kind === "model" && (
-            <span title="input → output tokens">
-              {step.usage.input_tokens}→{step.usage.output_tokens} tok
+            <span title="input and output tokens">
+              {step.usage.input_tokens} in, {step.usage.output_tokens} out
             </span>
           )}
           <span>{formatMs(step.latency_ms)}</span>
@@ -69,17 +67,17 @@ export function StepDetails({ step }: { step: Step }) {
     <div className="step-body">
       <div className="step-facts">
         <span>
-          model <code>{step.model}</code>
+          Model <code>{step.model}</code>
         </span>
         <span>
-          stop <code>{step.stop_reason}</code>
+          Stop reason <code>{step.stop_reason}</code>
         </span>
-        <span>{step.streamed ? "streamed" : "non-streamed"}</span>
+        <span>{step.streamed ? "Streamed" : "Not streamed"}</span>
         <span>
-          wire <code>{step.wire_format}</code>
+          Wire format <code>{step.wire_format}</code>
         </span>
         <span title="hash of the messages sent">
-          input <code>{step.input_messages_digest.replace("sha256:", "").slice(0, 10)}</code>
+          Input <code>{step.input_messages_digest.replace("sha256:", "").slice(0, 10)}</code>
         </span>
       </div>
       {step.error && <JsonBlock label="Error" value={step.error} />}

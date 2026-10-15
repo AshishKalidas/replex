@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { DataSource } from "../api";
-import { DiffText, EmptyState, ErrorState, Loading, Pill } from "../components/common";
+import { DiffText, EmptyState, ErrorState, Loading, PageHead, Status, StepIcon } from "../components/common";
 import { StepDetails } from "../components/StepCard";
 import { inlineJson, stepSubtitle, stepTitle } from "../format";
 import { useAsync, useKeyNav } from "../hooks";
@@ -8,7 +8,12 @@ import { href } from "../router";
 import { readableDiff } from "../textdiff";
 import type { CompareResult, DiffEntry, FieldChange, RunSummary, Step } from "../types";
 
-const MARK: Record<DiffEntry["status"], string> = { same: "=", changed: "~", added: "+", removed: "−" };
+const LEGEND: { status: DiffEntry["status"]; label: string; tone: "neutral" | "warn" | "ok" | "fail" }[] = [
+  { status: "same", label: "unchanged", tone: "neutral" },
+  { status: "changed", label: "changed", tone: "warn" },
+  { status: "added", label: "added", tone: "ok" },
+  { status: "removed", label: "removed", tone: "fail" },
+];
 
 function RunPicker({
   label,
@@ -30,7 +35,7 @@ function RunPicker({
         </option>
         {runs.map((r) => (
           <option key={r.id} value={r.id}>
-            {r.kind}: {r.name}
+            {r.name} ({r.kind === "candidate" ? "latest run" : "recorded"})
           </option>
         ))}
       </select>
@@ -62,7 +67,7 @@ function Cell({ step }: { step: Step | undefined }) {
   return (
     <div className="cell">
       <div className="cell-title">
-        <span className="step-index">{step.index}</span>
+        <StepIcon kind={step.kind} />
         {step.kind === "tool" ? <code>{stepTitle(step)}</code> : <span>{stepTitle(step)}</span>}
       </div>
       <div className="cell-sub">{stepSubtitle(step)}</div>
@@ -87,13 +92,13 @@ export function DiffRows({ result, focusStep }: { result: CompareResult; focusSt
     });
   const [active, setActive] = useKeyNav(entries.length, toggle, initial !== null && initial >= 0 ? initial : null);
 
-  if (entries.length === 0) return <EmptyState title="Both runs are empty" />;
+  if (entries.length === 0) return <EmptyState title="Both runs are empty." />;
   return (
     <div className="diff" role="table" aria-label="Aligned steps">
       <div className="diff-row diff-header" role="row">
         <div className="mark" />
-        <div role="columnheader">{result.a.name} (A)</div>
-        <div role="columnheader">{result.b.name} (B)</div>
+        <div role="columnheader">Before · {result.a.name}</div>
+        <div role="columnheader">After · {result.b.name}</div>
       </div>
       {entries.map((e, i) => {
         const a = e.a_index === null ? undefined : result.a.steps[e.a_index];
@@ -113,9 +118,9 @@ export function DiffRows({ result, focusStep }: { result: CompareResult; focusSt
                 toggle(i);
               }}
               aria-expanded={open.has(i)}
-              aria-label={`${e.status} ${e.name}`}
+              aria-label={`${e.status === "same" ? "unchanged" : e.status}: ${e.name}`}
             >
-              <span className="mark">{MARK[e.status]}</span>
+              <span className="mark" aria-hidden="true" />
               <Cell step={a} />
               <Cell step={b} />
             </button>
@@ -125,14 +130,14 @@ export function DiffRows({ result, focusStep }: { result: CompareResult; focusSt
                   <Change key={k} change={c} />
                 ))}
                 {!open.has(i) && e.changes.length > 3 && (
-                  <span className="muted small">+{e.changes.length - 3} more</span>
+                  <span className="secondary">and {e.changes.length - 3} more</span>
                 )}
               </div>
             )}
             {open.has(i) && (
               <div className="diff-details">
-                <div>{a ? <StepDetails step={a} /> : <p className="muted">Not in A</p>}</div>
-                <div>{b ? <StepDetails step={b} /> : <p className="muted">Not in B</p>}</div>
+                <div>{a ? <StepDetails step={a} /> : <p className="secondary">Not in the first run</p>}</div>
+                <div>{b ? <StepDetails step={b} /> : <p className="secondary">Not in the second run</p>}</div>
               </div>
             )}
           </div>
@@ -167,24 +172,22 @@ export function CompareView({
 
   return (
     <section>
-      <header className="page-head">
-        <div>
-          <h1>Compare</h1>
-          <p className="muted">Steps aligned by type and tool name. Click a row or press Enter for details.</p>
-        </div>
-      </header>
+      <PageHead
+        title="Compare"
+        lede="Two runs, aligned step by step. Select a row for the full details on both sides."
+      />
       <div className="pickers">
-        <RunPicker label="A · before" runs={source.mode === "static" ? runList.filter((r) => r.kind === "baseline") : runList} value={a} onChange={(id) => go({ a: id })} />
-        <span className="picker-arrow" aria-hidden="true">⇄</span>
-        <RunPicker label="B · after" runs={bChoices} value={b} onChange={(id) => go({ b: id })} />
+        <RunPicker label="Before" runs={source.mode === "static" ? runList.filter((r) => r.kind === "baseline") : runList} value={a} onChange={(id) => go({ a: id })} />
+        <span className="picker-arrow" aria-hidden="true">
+          →
+        </span>
+        <RunPicker label="After" runs={bChoices} value={b} onChange={(id) => go({ b: id })} />
       </div>
       {!a || !b ? (
-        <EmptyState title="Pick two runs to compare">
-          Typically a baseline (A) and the candidate from a drift run (B).
-        </EmptyState>
+        <EmptyState title="Choose two runs.">Usually a recorded run and the latest run of the same scenario.</EmptyState>
       ) : !ready ? (
-        <EmptyState title="These runs are not in this report">
-          A static report holds each baseline with its own candidate only.
+        <EmptyState title="These runs are not in this report.">
+          A report holds each recorded run with its own latest run only.
         </EmptyState>
       ) : result.state === "loading" ? (
         <Loading what="comparison" />
@@ -193,14 +196,14 @@ export function CompareView({
       ) : result.data ? (
         <>
           <div className="legend">
-            {(["same", "changed", "added", "removed"] as const).map((s) => (
-              <span key={s} className={`legend-item diff-${s}`}>
-                <span className="mark">{MARK[s]}</span> {result.data!.diff.entries.filter((e) => e.status === s).length} {s}
-              </span>
+            {LEGEND.map((l) => (
+              <Status key={l.status} tone={l.tone}>
+                {result.data!.diff.entries.filter((e) => e.status === l.status).length} {l.label}
+              </Status>
             ))}
             {result.data.report && (
-              <a href={href({ view: "drift", name: result.data.report.name })} className="legend-report">
-                {result.data.report.passed ? <Pill tone="ok">policy passed</Pill> : <Pill tone="fail">policy failed</Pill>}
+              <a href={href({ view: "scenario", name: result.data.report.name })} className="cta legend-report">
+                {result.data.report.passed ? "Within policy" : "Breaks the policy"}
               </a>
             )}
           </div>

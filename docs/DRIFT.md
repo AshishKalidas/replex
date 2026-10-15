@@ -215,20 +215,42 @@ info  latency: latency 812 ms -> 1040 ms (+28%) (reported only)
 | `replex drift BASELINE CANDIDATE [--policy FILE]` | `rich` panel and aligned table; `--json` or `--markdown` instead. Exit code 1 on failures |
 | `replex report BASELINE_DIR CANDIDATE_DIR --html out.html` | One self-contained HTML file for all pairs (also `--markdown`, `--json`; `--fail-on-drift` for a non-zero exit) |
 | `pytest --replex-mode=drift --replex-report=out.html` | The same report for the cassettes in this run |
-| `replex console DIR --candidates CANDIDATE_DIR` | The interactive Compare and Drift views |
+| `replex console` | The local console: an overview of every scenario, a review page per scenario, run timelines and a step-by-step compare |
 
-The HTML report inlines the console's code and the data: it opens from a CI artifact or the
+The HTML report is the same console with the data inlined: it opens from a CI artifact or the
 file system with no server and makes no network requests (a test inspects the file for
 external URLs).
 
+## The console
+
+`replex console` serves two workspaces, switched from the top bar:
+
+- **Project**: your own recordings, from `[tool.replex]` (or `replex console DIR --candidates
+  DIR --policy FILE`). It is read from disk each time you return to the window, so a new
+  recording or drift run shows up without restarting anything.
+- **Sample**: a complete example that ships inside the package, so you can see the review flow
+  before recording anything. `replex console --sample` opens it on its own; `--no-sample`
+  hides it.
+
+The **Overview** answers one question: does each scenario still behave as recorded? Each one
+gets a verdict (behaviour changed, small differences, behaves as recorded, not re-run yet) and a
+sentence describing the difference, such as "Stopped calling check_refund_policy and started
+calling search_docs." The **review page** for a scenario adds the recorded and latest runs side
+by side, the aligned step-by-step diff, and the raw policy findings.
+
 ## Approving new behaviour
 
-If the drift is intended, promote the candidate:
+If the drift is intended, open the scenario in the console and choose **Accept new behaviour**:
+the latest run becomes the recording, and you commit the updated cassette. **Discard latest
+run** deletes the candidate and keeps the recording. Both ask for confirmation, work only in
+your project (never in the sample), and are refused when `CI` is set.
+
+From the command line, promote the candidate with:
 
 ```bash
 replex approve refund_request     # copies .replex/candidates/refund_request.replex.json over the baseline
 git add tests/cassettes/refund_request.replex.json
 ```
 
-Or re-record on purpose with `pytest --replex-mode=rewrite`. Both are refused in CI unless
+Or re-record on purpose with `pytest --replex-mode=rewrite`. All of these are refused in CI unless
 `REPLEX_ALLOW_RECORD_IN_CI=1`.

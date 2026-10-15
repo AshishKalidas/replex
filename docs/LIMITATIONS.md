@@ -87,7 +87,8 @@ the original values.
 
 - Streaming is replayed with the recorded event order and content, not the recorded timing.
 - Latency is recorded and reported but never enforced: it depends on the machine and network.
-- The console is local and read-only. It does not record, edit or approve runs.
+- The console runs locally. It reviews runs and can accept or discard a latest run in your
+  project; it does not record runs or edit recordings.
 - Supported wire formats are Anthropic Messages and OpenAI-compatible chat completions; other
   APIs are recorded and replayed but appear as raw exchanges unless you add a normaliser
   ([PROVIDERS.md](PROVIDERS.md)).

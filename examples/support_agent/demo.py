@@ -93,8 +93,8 @@ def main() -> int:
     report = OUT / "replex-report.html"
     print(f"\n{BOLD}HTML report:{RESET} {report}")
     print(f"{DIM}Open it in a browser (works from the file system, no server needed).")
-    print("Explore interactively:  replex console cassettes --candidates .replex/candidates")
-    print(f"Accept the new behaviour: replex approve refund_request{RESET}")
+    print("Review it in the console, and accept or discard each change:  replex console")
+    print(f"(run it from {HERE.name}/, or `replex console --sample` from anywhere){RESET}")
     return 0
 
 

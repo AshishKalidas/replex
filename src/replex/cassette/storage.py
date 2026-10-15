@@ -122,6 +122,22 @@ def load(path: str | os.PathLike[str]) -> Cassette:
     return loads(text, source=str(p))
 
 
+def promote_candidate(
+    candidate_dir: str | os.PathLike[str], baseline_dir: str | os.PathLike[str], name: str
+) -> Path:
+    """Make the candidate ``name`` the new baseline, then remove the candidate.
+
+    The candidate is validated first, so a broken file never becomes a baseline.
+    """
+    src = cassette_path(candidate_dir, name)
+    if not src.is_file():
+        raise CassetteNotFound(f"no candidate {src}; run a drift check first")
+    load(src)
+    dst = atomic_write_text(cassette_path(baseline_dir, name), src.read_text(encoding="utf-8"))
+    src.unlink()
+    return dst
+
+
 def list_cassettes(directory: str | os.PathLike[str]) -> list[Path]:
     """Every ``*.replex.json`` file directly inside ``directory``, sorted by name."""
     d = Path(directory)

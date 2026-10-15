@@ -1,9 +1,10 @@
 PY ?= python
 EXAMPLE := examples/support_agent
+SAMPLE := src/replex/console/sample
 PYTHON_VERSIONS := 3.10 3.11 3.12 3.13
 
 .PHONY: help install test test-fast lint format typecheck build-console test-console build demo \
-        record-claude record-mimo redact-check bench docker-build docker-test docker-matrix \
+        record-claude record-mimo sample redact-check bench docker-build docker-test docker-matrix \
         docker-demo docker-console clean
 
 help: ## Show this help
@@ -43,8 +44,17 @@ build: ## Build sdist and wheel into dist/
 demo: ## Replay the example, run a drift check between prompt versions, write the HTML report
 	cd $(EXAMPLE) && $(PY) demo.py
 
+sample: ## Rebuild the console's bundled sample workspace from the example (offline)
+	cd $(EXAMPLE) && $(PY) demo.py > /dev/null
+	rm -rf $(SAMPLE) && mkdir -p $(SAMPLE)/cassettes $(SAMPLE)/candidates $(SAMPLE)/schemas
+	cp $(EXAMPLE)/cassettes/*.replex.json $(SAMPLE)/cassettes/
+	cp $(EXAMPLE)/.replex/candidates/*.replex.json $(SAMPLE)/candidates/
+	cp $(EXAMPLE)/replex.policy.yaml $(SAMPLE)/
+	cp $(EXAMPLE)/schemas/refund.json $(SAMPLE)/schemas/
+
 redact-check: ## Scan every committed cassette for secrets / personal data
 	$(PY) -m replex.cli redact --check $(EXAMPLE)/cassettes
+	$(PY) -m replex.cli redact --check $(SAMPLE)
 
 bench: ## Measure decorated-tool overhead outside a session
 	$(PY) -m pytest -q tests/test_benchmark.py -s
