@@ -1,8 +1,9 @@
 """The official SDKs, captured with no code changes, then replayed offline.
 
-Current Anthropic and OpenAI SDKs send requests through ``httpx2``; older releases (and those
-installed on Python 3.10) through ``httpx``. Whichever one pip resolved, recording through the
-real SDK and replaying it with nothing listening must give the same result.
+Current Anthropic and OpenAI SDKs send requests through ``httpx2``; older releases through
+``httpx``. Whichever one pip resolved, recording through the real SDK and replaying it with
+nothing listening must give the same result. Plain ``httpx`` clients are covered by
+test_http_capture.py.
 """
 
 from __future__ import annotations

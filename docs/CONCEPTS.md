@@ -133,9 +133,9 @@ that actually executed (zero in a full replay).
 
 While a session is active RepleX installs its transport into the clients of `httpx` and, when
 it is installed, `httpx2` (**automatic mode**), so SDK clients are intercepted with no code
-changes. Current releases of the official Anthropic and OpenAI SDKs use `httpx2`; older ones,
-and those installed on Python 3.10, use `httpx`. A test suite drives both real SDKs, sync,
-async and streaming, through a record and an offline replay. The patch is removed when the
+changes. Current releases of the official Anthropic and OpenAI SDKs use `httpx2`; older
+releases use `httpx`. The test suite drives both real SDKs, sync, async and streaming, through
+a record and an offline replay, and drives plain `httpx` clients through every capture path. The patch is removed when the
 session ends, including on exceptions.
 
 If you prefer to be explicit, pass a RepleX client to the SDK and set `patch_httpx=False`. Use
