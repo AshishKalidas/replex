@@ -1,15 +1,21 @@
-"""httpx transports that record and replay exchanges (sync and async, streaming aware)."""
+"""Transports that record and replay exchanges (sync and async, streaming aware).
+
+They work with every captured library (``httpx``, and ``httpx2`` when installed): requests and
+responses are only read through the API both share, and a replayed response is built with the
+library of the request it answers.
+"""
 
 from __future__ import annotations
 
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
-from typing import Any
+from typing import Any, Literal, overload
 
 import httpx
 
 from replex import _runtime
 from replex.capture.context import CaptureContext, _Pending, encode_body
+from replex.capture.libs import ASYNC_STREAM_BASES, SYNC_STREAM_BASES, lib_for, lib_named
 from replex.capture.patching import bypass_patch
 from replex.capture.sse import parse_sse, render_event
 from replex.cassette.model import ExchangeEvent, RecordedRequest
@@ -29,7 +35,11 @@ def _elapsed_ms(start: float) -> int:
 # --------------------------------------------------------------------- replay
 
 
-class _ReplayStream(httpx.SyncByteStream, httpx.AsyncByteStream):
+# The stream classes below subclass the stream bases of every captured library, so whichever
+# library's Response wraps them accepts them as sync or async streams.
+
+
+class _ReplayStream(*SYNC_STREAM_BASES, *ASYNC_STREAM_BASES):  # type: ignore[misc]
     """Yields recorded server-sent events one at a time, in their original order."""
 
     def __init__(self, chunks: list[bytes]) -> None:
@@ -51,10 +61,10 @@ def _replay_response(ctx: CaptureContext, request: httpx.Request) -> httpx.Respo
     headers = dict(rsp.headers)
     if rsp.stream is not None:
         chunks = [render_event(e) for e in rsp.stream]
-        return httpx.Response(
+        return lib_for(request).Response(  # type: ignore[no-any-return]
             rsp.status, headers=headers, stream=_ReplayStream(chunks), request=request
         )
-    return httpx.Response(
+    return lib_for(request).Response(  # type: ignore[no-any-return]
         rsp.status,
         headers=headers,
         content=encode_body(rsp.body, rsp.body_encoding),
@@ -98,10 +108,8 @@ class _Recording:
         self.ctx.drop(self.pending)
 
 
-class _TeeSyncStream(httpx.SyncByteStream):
-    def __init__(
-        self, inner: httpx.SyncByteStream, rec: _Recording, response: httpx.Response
-    ) -> None:
+class _TeeSyncStream(*SYNC_STREAM_BASES):  # type: ignore[misc]
+    def __init__(self, inner: Any, rec: _Recording, response: httpx.Response) -> None:
         self._inner, self._rec, self._response = inner, rec, response
         rec.ctx.open_streams.append(self._finish)
 
@@ -120,10 +128,8 @@ class _TeeSyncStream(httpx.SyncByteStream):
             self._finish()
 
 
-class _TeeAsyncStream(httpx.AsyncByteStream):
-    def __init__(
-        self, inner: httpx.AsyncByteStream, rec: _Recording, response: httpx.Response
-    ) -> None:
+class _TeeAsyncStream(*ASYNC_STREAM_BASES):  # type: ignore[misc]
+    def __init__(self, inner: Any, rec: _Recording, response: httpx.Response) -> None:
         self._inner, self._rec, self._response = inner, rec, response
         rec.ctx.open_streams.append(self._finish)
 
@@ -158,7 +164,7 @@ def _record_sync(ctx: CaptureContext, request: httpx.Request, send: SyncSend) ->
         raise
     if _is_event_stream(response.headers) and not response.headers.get("content-encoding"):
         stream = response.stream
-        assert isinstance(stream, httpx.SyncByteStream)
+        assert isinstance(stream, SYNC_STREAM_BASES)
         response.stream = _TeeSyncStream(stream, rec, response)
     else:
         try:
@@ -182,7 +188,7 @@ async def _record_async(
         raise
     if _is_event_stream(response.headers) and not response.headers.get("content-encoding"):
         stream = response.stream
-        assert isinstance(stream, httpx.AsyncByteStream)
+        assert isinstance(stream, ASYNC_STREAM_BASES)
         response.stream = _TeeAsyncStream(stream, rec, response)
     else:
         try:
@@ -265,17 +271,32 @@ class AsyncReplexTransport(httpx.AsyncBaseTransport):
         await self._inner.aclose()
 
 
-def http_client(**kwargs: Any) -> httpx.Client:
-    """An ``httpx.Client`` whose requests RepleX records and replays.
+@overload
+def http_client(library: Literal["httpx"] = ..., **kwargs: Any) -> httpx.Client: ...
+@overload
+def http_client(library: Literal["httpx2"], **kwargs: Any) -> Any: ...
 
-    Pass it to an SDK with ``http_client=``. Keyword arguments go to ``httpx.Client``; a
-    ``transport`` argument is wrapped rather than replaced.
+
+def http_client(library: str = "httpx", **kwargs: Any) -> Any:
+    """A client whose requests RepleX records and replays.
+
+    Pass it to an SDK with ``http_client=``. Current Anthropic and OpenAI SDKs expect an
+    ``httpx2`` client (``library="httpx2"``); older ones, and plain ``httpx`` code, the default.
+    Keyword arguments go to the client; a ``transport`` argument is wrapped, not replaced.
     """
-    inner = kwargs.pop("transport", None)
-    return httpx.Client(transport=ReplexTransport(inner), **kwargs)
+    lib = lib_named(library)
+    inner = kwargs.pop("transport", None) or lib.HTTPTransport()
+    return lib.Client(transport=ReplexTransport(inner), **kwargs)
 
 
-def async_http_client(**kwargs: Any) -> httpx.AsyncClient:
-    """An ``httpx.AsyncClient`` whose requests RepleX records and replays."""
-    inner = kwargs.pop("transport", None)
-    return httpx.AsyncClient(transport=AsyncReplexTransport(inner), **kwargs)
+@overload
+def async_http_client(library: Literal["httpx"] = ..., **kwargs: Any) -> httpx.AsyncClient: ...
+@overload
+def async_http_client(library: Literal["httpx2"], **kwargs: Any) -> Any: ...
+
+
+def async_http_client(library: str = "httpx", **kwargs: Any) -> Any:
+    """An async client whose requests RepleX records and replays (see :func:`http_client`)."""
+    lib = lib_named(library)
+    inner = kwargs.pop("transport", None) or lib.AsyncHTTPTransport()
+    return lib.AsyncClient(transport=AsyncReplexTransport(inner), **kwargs)

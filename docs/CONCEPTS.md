@@ -131,11 +131,20 @@ that actually executed (zero in a full replay).
 
 ## HTTP capture
 
-While a session is active RepleX installs its transport into `httpx.Client` and
-`httpx.AsyncClient` (**automatic mode**), so SDK clients are intercepted with no code changes.
-The patch is removed when the session ends, including on exceptions. If you prefer to be
-explicit, pass `replex.http_client()` / `replex.async_http_client()` to the SDK
-(`anthropic.Anthropic(http_client=replex.http_client())`) and set `patch_httpx=False`.
+While a session is active RepleX installs its transport into the clients of `httpx` and, when
+it is installed, `httpx2` (**automatic mode**), so SDK clients are intercepted with no code
+changes. Current releases of the official Anthropic and OpenAI SDKs use `httpx2`; older ones,
+and those installed on Python 3.10, use `httpx`. A test suite drives both real SDKs, sync,
+async and streaming, through a record and an offline replay. The patch is removed when the
+session ends, including on exceptions.
+
+If you prefer to be explicit, pass a RepleX client to the SDK and set `patch_httpx=False`. Use
+the library the SDK expects: `httpx2` for current SDKs, `httpx` (the default) for older ones.
+
+```python
+client = anthropic.Anthropic(http_client=replex.http_client(library="httpx2"))
+client = openai.AsyncOpenAI(http_client=replex.async_http_client(library="httpx2"))
+```
 
 - Only hosts in `intercept_hosts` (default `api.anthropic.com`) are recorded.
 - In `replay` mode a request to any other host raises `NetworkBlocked`, unless the host is in

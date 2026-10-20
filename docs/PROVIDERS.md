@@ -2,12 +2,12 @@
 
 RepleX has two strictly separate layers:
 
-- The **capture layer** (the `httpx` transport and `@replex.tool`) knows nothing about
+- The **capture layer** (the `httpx`/`httpx2` transport and `@replex.tool`) knows nothing about
   providers. It records raw HTTP exchanges and tool calls.
 - The **interpretation layer** (normalisers, traces, diff) turns recorded exchanges into
   provider-neutral model steps. It never touches the network.
 
-So recording and replay work for any JSON-over-`httpx` API. A normaliser only adds meaning:
+So recording and replay work for any JSON API called through `httpx` or `httpx2`. A normaliser only adds meaning:
 which model ran, what it said, which tools it asked for and how many tokens it used.
 
 ## Supported wire formats

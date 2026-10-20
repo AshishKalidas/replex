@@ -55,6 +55,8 @@ Design choices worth knowing about, one line each: decision, reason.
 
 ## Example, packaging and tooling
 
+- **Both `httpx` and `httpx2` are captured, with stream classes that subclass both libraries' bases and responses built by the request's own library.** The official SDKs moved to `httpx2`; older releases and Python 3.10 still use `httpx`, so supporting one would leave half of users uncaptured.
+- **The real Anthropic and OpenAI SDKs are dev dependencies, and tests record and replay through them.** Capture of the SDKs is the product's central promise; only the SDKs themselves can prove it.
 - **The example agent uses raw `httpx` rather than the provider SDKs.** No extra dependencies, and it shows that capture works below any SDK.
 - **The example is its own pytest project with its own `[tool.replex]`.** Its settings (cassette dir, mock host, custom redaction rule) do not leak into the library's tests.
 - **The example's simulated model is a mock-provider responder that follows the system prompt.** The v1 → v2 prompt change produces a genuine behaviour change offline.
