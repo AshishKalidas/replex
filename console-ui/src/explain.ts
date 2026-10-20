@@ -41,6 +41,11 @@ function list(names: string[]): string {
   return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 
+/** Tool names as people read them: “Check refund policy”. */
+function quoted(names: string[]): string {
+  return list(names.map((n) => `“${humanize(n)}”`));
+}
+
 function strings(value: unknown): string[] {
   return Array.isArray(value) ? value.map(String) : [];
 }
@@ -52,21 +57,19 @@ function sentence(f: Finding, sequenceChanged: boolean): string | null {
       const after = strings(f.after);
       const dropped = [...new Set(before.filter((n) => !after.includes(n)))];
       const added = [...new Set(after.filter((n) => !before.includes(n)))];
-      const parts: string[] = [];
-      if (dropped.length) parts.push(`stopped calling ${list(dropped)}`);
-      if (added.length) parts.push(`started calling ${list(added)}`);
-      if (!parts.length) return "Calls the same tools in a different order.";
-      const text = parts.join(" and ");
-      return `${text[0]!.toUpperCase()}${text.slice(1)}.`;
+      if (dropped.length && added.length) return `Skips ${quoted(dropped)} and uses ${quoted(added)} instead.`;
+      if (dropped.length) return `Skips ${quoted(dropped)}.`;
+      if (added.length) return `Now also uses ${quoted(added)}.`;
+      return "Uses the same tools in a different order.";
     }
     case "new_tools":
       // tool_sequence already names the new tools when both checks fire.
-      return sequenceChanged ? null : `Started calling ${list(strings(f.after))}.`;
+      return sequenceChanged ? null : `Now also uses ${quoted(strings(f.after))}.`;
     case "forbidden_tools":
-      return `Called ${String(f.after)}, which the policy forbids.`;
+      return `Used ${quoted([String(f.after)])}, which your policy forbids.`;
     case "tool_args": {
       const m = /'([^']+)'/.exec(f.message);
-      return `Calls ${m ? m[1] : "a tool"} with different arguments.`;
+      return `Uses ${m ? quoted([m[1]!]) : "a tool"} with different inputs.`;
     }
     case "final_output": {
       if (f.message.includes("not valid JSON") || f.message.includes("violates the schema")) {
@@ -107,9 +110,9 @@ export function explain(report: DriftReport): string[] {
 /** A one-line verdict for a scenario, written for someone skimming. */
 export function headline(report: DriftReport | null): string {
   const v = verdictOf(report);
-  if (!report || v === "pending") return "Recorded, and not re-run since. Run a drift check to compare it.";
+  if (!report || v === "pending") return "Recorded. Not checked against a change yet.";
   const lines = explain(report);
-  if (v === "same") return "The latest run does the same thing as the recorded one.";
+  if (v === "same") return "Still handled exactly as recorded.";
   return lines[0] ?? VERDICT_LABEL[v];
 }
 

@@ -190,8 +190,8 @@ changed. Each scenario's review page shows the two runs side by side and step by
 **The change is wrong** (it is, here): fix the prompt, run the drift check again until it
 passes, and delete `.replex/`. The baselines never changed.
 
-**The change is right**: accept it. In the console, choose **Accept new behaviour** on each
-scenario's review page. Or from the command line, promote the candidates to baselines. Either
+**The change is right**: accept it. In the console, answer **Yes, accept the new behaviour** on
+each scenario's review page. Or from the command line, promote the candidates to baselines. Either
 way, commit them, so the pull request shows the behaviour change as a cassette diff for review:
 
 ```bash

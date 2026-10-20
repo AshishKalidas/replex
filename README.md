@@ -45,8 +45,8 @@ replex console --sample
 
 That opens the **sample workspace**: a customer-support agent whose prompt was reworded.
 RepleX caught that two of its four scenarios changed behaviour, and the console shows you
-exactly how: the agent stopped calling `check_refund_policy` and started calling `search_docs`
-instead.
+exactly how: what the customer wrote, what the agent did and answered before the change, and
+what it does now. Here it skips the refund-policy check and searches the docs instead.
 
 ![Reviewing a scenario: what changed, side by side, and the decision](docs/images/console-scenario.png)
 
@@ -114,9 +114,10 @@ pytest --replex-mode=drift
 replex console
 ```
 
-The console opens on your project: which scenarios changed, what changed in plain language,
-the two runs side by side and step by step. If the new behaviour is what you wanted, accept it
-and commit the updated recording. If it isn't, discard it and fix the change. The page picks up
+The console opens on your project: which scenarios changed and, for each one, the
+conversation before and after your change, in plain language. Then it asks one question: is
+this what you wanted? Accept it and commit the updated recording, or reject it and fix the
+change. The numbers and the full step-by-step diff are there for engineers. The page picks up
 new recordings whenever you come back to it, and the sample workspace is one click away in the
 top bar.
 

@@ -1,12 +1,17 @@
 import { useState, type ReactNode } from "react";
 import type { DataSource } from "../api";
-import { Collapsible, DiffText, EmptyState, ErrorState, Loading, PageHead, Stat, Status, ToolChips } from "../components/common";
+import { Collapsible, DiffText, EmptyState, ErrorState, Loading, PageHead, Status, ToolChips } from "../components/common";
 import { explain, humanize, verdictOf, VERDICT_LABEL, VERDICT_TONE } from "../explain";
+import { actions, compareActions, customerMessage, reply, type Action } from "../story";
 import { formatMs, formatTokens, inlineJson } from "../format";
 import { useAsync } from "../hooks";
 import { href } from "../router";
 import { readableDiff } from "../textdiff";
 import type { DriftResult, Finding, Trace } from "../types";
+
+function lowerFirst(text: string): string {
+  return text ? text[0]!.toLowerCase() + text.slice(1) : text;
+}
 import { DiffRows } from "./CompareView";
 
 type Loaded = { kind: "pair"; drift: DriftResult } | { kind: "single"; trace: Trace } | { kind: "missing" };
@@ -22,25 +27,11 @@ async function load(source: DataSource, name: string): Promise<Loaded> {
 
 type Pending = "accept" | "discard" | null;
 
-/** Accept or discard the latest run, with one inline confirmation step. */
+/** The question a review ends with, and the two answers. One inline confirmation each. */
 function Decision({ source, name, onDone }: { source: DataSource; name: string; onDone: (message: string) => void }) {
   const [confirming, setConfirming] = useState<Pending>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (!source.writable) {
-    return (
-      <p className="decision-note">
-        {source.workspace === "sample" ? (
-          "The sample workspace is read-only. In your own project you accept or discard changes right here."
-        ) : (
-          <>
-            To accept this change, run <code>replex approve {name}</code> in your project.
-          </>
-        )}
-      </p>
-    );
-  }
 
   const act = async (what: "accept" | "discard") => {
     setBusy(true);
@@ -50,8 +41,8 @@ function Decision({ source, name, onDone }: { source: DataSource; name: string; 
       else await source.discard(name);
       onDone(
         what === "accept"
-          ? "Accepted. The latest run is now the recorded behaviour; commit the updated cassette."
-          : "Discarded. The recorded behaviour is unchanged.",
+          ? "Accepted. This is now the expected behaviour. Commit the updated recording so your tests use it."
+          : "Rejected. The latest run is gone and the expected behaviour is unchanged. Fix the change, then check again.",
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -61,31 +52,58 @@ function Decision({ source, name, onDone }: { source: DataSource; name: string; 
     }
   };
 
-  if (confirming) {
-    return (
-      <div className="decision" role="group" aria-label="Confirm">
+  let controls: ReactNode;
+  if (!source.writable) {
+    controls = (
+      <p className="decision-note">
+        {source.workspace === "sample" ? (
+          "This sample is read-only. In your own project you answer right here: accept the new behaviour, or reject it and fix the change."
+        ) : (
+          <>
+            Answer from your project with <code>replex approve {name}</code>, or by running the console there.
+          </>
+        )}
+      </p>
+    );
+  } else if (confirming) {
+    controls = (
+      <div className="decision-buttons" role="group" aria-label="Confirm">
         <p>
           {confirming === "accept"
-            ? "Replace the recorded behaviour with the latest run?"
-            : "Delete the latest run and keep the recorded behaviour?"}
+            ? "Save the latest run as the new expected behaviour?"
+            : "Throw away the latest run and keep the expected behaviour?"}
         </p>
         <button type="button" className="button" disabled={busy} onClick={() => act(confirming)}>
-          {confirming === "accept" ? "Accept" : "Discard"}
+          {confirming === "accept" ? "Accept" : "Reject"}
         </button>
         <button type="button" className="link" disabled={busy} onClick={() => setConfirming(null)}>
           Cancel
         </button>
       </div>
     );
+  } else {
+    controls = (
+      <>
+        <div className="decision-buttons">
+          <button type="button" className="button" onClick={() => setConfirming("accept")}>
+            Yes, accept the new behaviour
+          </button>
+          <button type="button" className="button button-secondary" onClick={() => setConfirming("discard")}>
+            No, reject it
+          </button>
+        </div>
+        <p className="decision-note">
+          Accepting saves the latest run as the new recording, so your tests expect it from now on. Rejecting
+          throws the latest run away; fix your change and run the check again.
+        </p>
+      </>
+    );
   }
+
   return (
     <div className="decision">
-      <button type="button" className="button" onClick={() => setConfirming("accept")}>
-        Accept new behaviour
-      </button>
-      <button type="button" className="link" onClick={() => setConfirming("discard")}>
-        Discard latest run
-      </button>
+      <h2>Is this what you wanted?</h2>
+      {controls}
       {error && <p className="text-fail">{error}</p>}
     </div>
   );
@@ -161,6 +179,82 @@ function Versus({ drift }: { drift: DriftResult }) {
   );
 }
 
+function ActionList({ list }: { list: Action[] }) {
+  if (!list.length) return <p className="quiet">Used no tools.</p>;
+  return (
+    <ol className="actions-list">
+      {list.map((a, i) => (
+        <li key={i} className={`action action-${a.status}`}>
+          <span className="action-label">
+            <span className="action-name">{a.label}</span>
+            {a.status === "removed" && <span className="action-tag">Skipped</span>}
+            {a.status === "added" && <span className="action-tag">New</span>}
+            {a.error && <span className="action-tag action-tag-error">Failed</span>}
+          </span>
+          {a.detail && <span className="action-detail">{a.detail}</span>}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function ReplyBlock({ output }: { output: string }) {
+  const r = reply(output);
+  return (
+    <div className="reply">
+      {r.text ? <p className="reply-text">{r.text}</p> : <p className="quiet">No reply.</p>}
+      {r.facts.length > 0 && (
+        <dl className="reply-facts">
+          {r.facts.map(([k, v]) => (
+            <div key={k}>
+              <dt>{k}</dt>
+              <dd>{v}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  );
+}
+
+function CustomerSaid({ trace }: { trace: Trace }) {
+  const said = customerMessage(trace);
+  if (!said) return null;
+  return (
+    <figure className="customer">
+      <figcaption>The customer wrote</figcaption>
+      <blockquote>{said}</blockquote>
+    </figure>
+  );
+}
+
+/** The recorded and latest runs told as what the agent did and said. */
+function Conversation({ drift }: { drift: DriftResult }) {
+  const { before, after } = compareActions(actions(drift.baseline), actions(drift.candidate));
+  const sameReply = drift.baseline.final_output === drift.candidate.final_output;
+  return (
+    <section className="conversation" aria-label="The conversation, before and after">
+      <CustomerSaid trace={drift.baseline} />
+      <div className="before-after">
+        <div className="side">
+          <h3>Before your change</h3>
+          <div className="side-label">What the agent did</div>
+          <ActionList list={before} />
+          <div className="side-label">What it answered</div>
+          <ReplyBlock output={drift.baseline.final_output} />
+        </div>
+        <div className="side">
+          <h3>After your change</h3>
+          <div className="side-label">What the agent did</div>
+          <ActionList list={after} />
+          <div className="side-label">What it answered{sameReply ? " (unchanged)" : ""}</div>
+          <ReplyBlock output={drift.candidate.final_output} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function ScenarioView({ source, name }: { source: DataSource; name: string }) {
   const [revision, setRevision] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
@@ -201,7 +295,7 @@ export function ScenarioView({ source, name }: { source: DataSource; name: strin
             </>
           }
           title={humanize(name)}
-          lede="This is the recorded behaviour. After your next change, run a drift check to see whether the agent still does the same thing."
+          lede="This is how the agent handled this conversation when it was recorded. RepleX expects it to keep doing the same."
           actions={
             <a className="button" href={href({ view: "run", id: `baseline:${name}`, step: null })}>
               Open the recorded run
@@ -213,25 +307,21 @@ export function ScenarioView({ source, name }: { source: DataSource; name: strin
             {notice}
           </p>
         )}
-        <div className="stats">
-          <Stat label="Steps" value={t.steps.length} />
-          <Stat label="Tool calls" value={t.steps.filter((s) => s.kind === "tool").length} />
-          <Stat label="Tokens" value={formatTokens(t.usage.input_tokens + t.usage.output_tokens)} />
-        </div>
-        <div className="panel">
-          <div className="panel-row">
-            <div className="panel-label">Tools, in order</div>
-            <ToolChips names={t.steps.flatMap((s) => (s.kind === "tool" ? [s.name] : []))} />
+        <section className="conversation" aria-label="The recorded conversation">
+          <CustomerSaid trace={t} />
+          <div className="before-after before-after-single">
+            <div className="side">
+              <h3>What the agent does</h3>
+              <ActionList list={actions(t)} />
+              <div className="side-label">What it answers</div>
+              <ReplyBlock output={t.final_output} />
+            </div>
           </div>
-          <div className="panel-row">
-            <div className="panel-label">Final answer</div>
-            <p className="final">{t.final_output || <span className="quiet">(empty)</span>}</p>
-          </div>
-          <div className="panel-row">
-            <div className="panel-label">Check it</div>
-            <code>pytest --replex-mode=drift</code>
-          </div>
-        </div>
+        </section>
+        <p className="decision-note pending-note">
+          After your next change to the prompt, model or code, run <code>pytest --replex-mode=drift</code> and this
+          page will show whether the agent still does the same thing.
+        </p>
       </section>
     );
   }
@@ -259,13 +349,10 @@ export function ScenarioView({ source, name }: { source: DataSource; name: strin
         }
         title={humanize(name)}
         lede={
-          verdict === "changed"
-            ? "The latest run breaks your policy. Accept it if the new behaviour is what you wanted; otherwise fix the change and run the check again."
-            : verdict === "minor"
-              ? "The latest run differs in ways your policy allows. Review the differences, then accept or discard them."
-              : "The latest run does the same thing as the recorded one."
+          verdict === "same"
+            ? "The agent still handles this conversation the same way it did when it was recorded."
+            : `After your change, the agent ${lowerFirst(changes[0] ?? "behaves differently.")}`
         }
-        actions={<Decision source={source} name={name} onDone={done} />}
       />
       {notice && (
         <p className="notice" role="status">
@@ -273,21 +360,34 @@ export function ScenarioView({ source, name }: { source: DataSource; name: strin
         </p>
       )}
 
-      <div className="section-head section-head-first">
-        <h2>What changed</h2>
-      </div>
-      {changes.length ? (
-        <ul className="changes-list">
-          {changes.map((c) => (
-            <li key={c}>{c}</li>
-          ))}
-        </ul>
+      <Conversation drift={drift} />
+
+      {verdict === "same" ? (
+        <p className="decision-note pending-note">Nothing to decide: this scenario behaves as recorded.</p>
       ) : (
-        <p className="secondary">Nothing your policy checks for.</p>
+        <Decision source={source} name={name} onDone={done} />
       )}
 
+      {changes.length > 1 && (
+        <>
+          <div className="section-head">
+            <h2>Everything that changed</h2>
+          </div>
+          <ul className="changes-list">
+            {changes.map((c) => (
+              <li key={c}>{c}</li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      <div className="details-divider">
+        <h2>The details</h2>
+        <p>For engineers: the numbers, every model and tool call, and the raw policy results.</p>
+      </div>
+
       <div className="section-head">
-        <h2>Recorded and latest, side by side</h2>
+        <h2>In numbers</h2>
       </div>
       <Versus drift={drift} />
 

@@ -1,23 +1,35 @@
 import type { DataSource, WorkspaceInfo } from "../api";
-import { EmptyState, ErrorState, Loading, PageHead, Status, ToolChips } from "../components/common";
+import { EmptyState, ErrorState, Loading, PageHead, Status } from "../components/common";
 import { headline, humanize, scenarios, verdictOf, VERDICT_LABEL, VERDICT_TONE, type Scenario } from "../explain";
 import { useAsync, useKeyNav } from "../hooks";
 import { href } from "../router";
+import { customerMessage } from "../story";
 import type { DriftReport } from "../types";
 
 interface Loaded {
   list: Scenario[];
   reports: Map<string, DriftReport>;
+  /** What the customer said in each scenario, from its recorded run. */
+  said: Map<string, string>;
 }
 
 async function load(source: DataSource): Promise<Loaded> {
   const list = scenarios(await source.runs());
-  const pairs = await Promise.all(
-    list
-      .filter((s) => s.baseline && s.candidate)
-      .map(async (s) => [s.name, (await source.drift(s.name)).report] as const),
+  const reports = new Map<string, DriftReport>();
+  const said = new Map<string, string>();
+  await Promise.all(
+    list.map(async (s) => {
+      if (s.baseline && s.candidate) {
+        const drift = await source.drift(s.name);
+        reports.set(s.name, drift.report);
+        said.set(s.name, customerMessage(drift.baseline));
+      } else {
+        const run = s.baseline ?? s.candidate;
+        if (run) said.set(s.name, customerMessage(await source.run(run.id)));
+      }
+    }),
   );
-  return { list, reports: new Map(pairs) };
+  return { list, reports, said };
 }
 
 function plural(n: number, word: string): string {
@@ -121,10 +133,22 @@ export function OverviewView({
     );
   }
 
-  const { reports } = data.data;
+  const { reports, said } = data.data;
+  const firstChanged = list.find((s) => verdictOf(reports.get(s.name) ?? null) === "changed");
   return (
     <section>
-      <PageHead eyebrow={eyebrow} title={title(list, reports)} lede={isSample ? SAMPLE_STORY : PURPOSE} />
+      <PageHead
+        eyebrow={eyebrow}
+        title={title(list, reports)}
+        lede={isSample ? SAMPLE_STORY : PURPOSE}
+        actions={
+          firstChanged && (
+            <a className="button" href={href({ view: "scenario", name: firstChanged.name })}>
+              {isSample ? "See what the prompt change broke" : "Start reviewing"}
+            </a>
+          )
+        }
+      />
 
       <div className="section-head section-head-first">
         <h2>Scenarios</h2>
@@ -136,7 +160,6 @@ export function OverviewView({
         {list.map((s, i) => {
           const report = reports.get(s.name) ?? null;
           const verdict = verdictOf(report);
-          const latest = s.candidate ?? s.baseline;
           return (
             <li key={s.name} data-nav-index={i} className={i === active ? "row-active" : ""} onMouseEnter={() => setActive(i)}>
               <a href={href({ view: "scenario", name: s.name })} className="scenario">
@@ -145,8 +168,8 @@ export function OverviewView({
                   <code className="scenario-id">{s.name}</code>
                 </div>
                 <div className="scenario-what">
+                  {said.get(s.name) && <p className="scenario-said">“{said.get(s.name)}”</p>}
                   <p>{headline(report)}</p>
-                  <ToolChips names={latest?.tool_names ?? []} />
                 </div>
                 <div className="scenario-status">
                   <Status tone={VERDICT_TONE[verdict]}>{VERDICT_LABEL[verdict]}</Status>

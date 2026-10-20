@@ -234,15 +234,17 @@ external URLs).
 
 The **Overview** answers one question: does each scenario still behave as recorded? Each one
 gets a verdict (behaviour changed, small differences, behaves as recorded, not re-run yet) and a
-sentence describing the difference, such as "Stopped calling check_refund_policy and started
-calling search_docs." The **review page** for a scenario adds the recorded and latest runs side
-by side, the aligned step-by-step diff, and the raw policy findings.
+sentence describing the difference, such as "Skips “Check refund policy” and uses “Search
+docs” instead." The **review page** tells the scenario as a conversation: what the customer
+wrote, then what the agent did and answered before and after the change, with skipped and new
+steps marked. It ends with the decision (accept or reject), followed by the numbers, the aligned
+step-by-step diff and the raw policy findings for engineers.
 
 ## Approving new behaviour
 
-If the drift is intended, open the scenario in the console and choose **Accept new behaviour**:
-the latest run becomes the recording, and you commit the updated cassette. **Discard latest
-run** deletes the candidate and keeps the recording. Both ask for confirmation, work only in
+If the drift is intended, open the scenario in the console and answer "Is this what you wanted?"
+with **Yes, accept the new behaviour**: the latest run becomes the recording, and you commit the
+updated cassette. **No, reject it** deletes the candidate and keeps the recording. Both ask for confirmation, work only in
 your project (never in the sample), and are refused when `CI` is set.
 
 From the command line, promote the candidate with:

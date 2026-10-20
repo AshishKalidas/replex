@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { detectReport, serverSource, splitRunId, staticSource, summarise } from "../src/api";
 import { explain, headline, humanize, scenarios, verdictOf } from "../src/explain";
+import { actions, compareActions, customerMessage, reply } from "../src/story";
 import { filterRuns, formatDate, formatMs, formatTokens, inlineJson, lastMessageText, stepSubtitle, stepTitle, truncate } from "../src/format";
 import { href, parseRoute, type Route } from "../src/router";
 import { readableDiff, tokenize, wordDiff } from "../src/textdiff";
@@ -175,15 +176,15 @@ describe("explain", () => {
     expect(humanize("order-status")).toBe("Order status");
     expect(humanize("")).toBe("");
   });
-  it("says which tools the agent stopped and started calling, once", () => {
+  it("says which tools the agent skips and uses instead, once", () => {
     const r = report([
       finding("tool_sequence", "fail", ["get_order", "check_refund_policy"], ["get_order", "search_docs"]),
       finding("new_tools", "fail", ["check_refund_policy", "get_order"], ["search_docs"]),
       finding("latency", "info", 1, 2),
     ]);
-    expect(explain(r)).toEqual(["Stopped calling check_refund_policy and started calling search_docs."]);
+    expect(explain(r)).toEqual(["Skips “Check refund policy” and uses “Search docs” instead."]);
     expect(verdictOf(r)).toBe("changed");
-    expect(headline(r)).toBe("Stopped calling check_refund_policy and started calling search_docs.");
+    expect(headline(r)).toBe("Skips “Check refund policy” and uses “Search docs” instead.");
   });
   it("covers every policy check in plain words", () => {
     const r = report([
@@ -196,15 +197,15 @@ describe("explain", () => {
       finding("tokens", "warn", 100, 180),
     ]);
     expect(explain(r)).toEqual([
-      "Calls the same tools in a different order.",
-      "Called delete_order, which the policy forbids.",
-      "Calls get_order with different arguments.",
+      "Uses the same tools in a different order.",
+      "Used “Delete order”, which your policy forbids.",
+      "Uses “Get order” with different inputs.",
       "The final answer is worded differently (73% similar).",
       "Takes 8 steps where it used to take 5.",
       "Uses 80% more tokens.",
     ]);
     const alone = report([finding("new_tools", "fail", [], ["c", "d", "e"])]);
-    expect(explain(alone)).toEqual(["Started calling c, d and e."]);
+    expect(explain(alone)).toEqual(["Now also uses “C”, “D” and “E”."]);
     const format = report([finding("final_output", "fail", "{}", "hi", "candidate final output is not valid JSON (json_schema)")]);
     expect(explain(format)).toEqual(["The final answer no longer has the required format."]);
   });
@@ -212,8 +213,8 @@ describe("explain", () => {
     expect(verdictOf(null)).toBe("pending");
     expect(verdictOf(report([]))).toBe("same");
     expect(verdictOf(report([finding("steps", "warn", 5, 8)]))).toBe("minor");
-    expect(headline(null)).toMatch(/not re-run/);
-    expect(headline(report([]))).toMatch(/same thing/);
+    expect(headline(null)).toMatch(/Not checked/);
+    expect(headline(report([]))).toMatch(/exactly as recorded/);
   });
   it("groups runs into scenarios, the ones needing review first", () => {
     const list = scenarios([
@@ -225,5 +226,45 @@ describe("explain", () => {
     ]);
     expect(list.map((s) => s.name)).toEqual(["c", "a", "b"]);
     expect(list[2]!.candidate).toBeNull();
+  });
+});
+
+describe("story", () => {
+  it("finds what the customer wrote, in either wire format", () => {
+    expect(customerMessage(trace("x", ["get_order"]))).toBe("refund 1042");
+    const t = trace("x", ["get_order"]);
+    const first = t.steps[0]!;
+    if (first.kind === "model") {
+      first.input_messages = [
+        { role: "system", content: "You are support." },
+        { role: "user", content: [{ type: "text", text: "Where is order 7?" }] },
+      ];
+    }
+    expect(customerMessage(t)).toBe("Where is order 7?");
+    expect(customerMessage({ ...t, steps: [] })).toBe("");
+  });
+  it("reads a structured answer the way a person would", () => {
+    expect(reply('{"decision": "refund_denied", "refund_id": null, "message": "Sorry, too late."}')).toEqual({
+      text: "Sorry, too late.",
+      facts: [["Decision", "Refund denied"]],
+    });
+    expect(reply("Plain words.")).toEqual({ text: "Plain words.", facts: [] });
+    expect(reply("{not json")).toEqual({ text: "{not json", facts: [] });
+    expect(reply('{"count": 3, "items": [1]}')).toEqual({ text: "", facts: [["Count", "3"]] });
+  });
+  it("lists the agent's actions and marks what changed", () => {
+    const before = actions(trace("x", ["get_order", "check_refund_policy"]));
+    const after = actions(trace("x", ["get_order", "search_docs"]));
+    expect(before.map((a) => [a.label, a.detail])).toEqual([
+      ["Get order", "order id 1042"],
+      ["Check refund policy", "order id 1042"],
+    ]);
+    const marked = compareActions(before, after);
+    expect(marked.before.map((a) => a.status)).toEqual(["same", "removed"]);
+    expect(marked.after.map((a) => a.status)).toEqual(["same", "added"]);
+    // Without executed tools, the model's tool requests tell the story.
+    const requested = trace("x", ["get_order"]);
+    requested.steps = requested.steps.filter((s) => s.kind === "model");
+    expect(actions(requested).map((a) => a.label)).toEqual(["Get order"]);
   });
 });
