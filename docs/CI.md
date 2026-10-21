@@ -232,3 +232,4 @@ set `REPLEX_ALLOW_RECORD_IN_CI=1` on it explicitly.
 suite with its 90% coverage gate, the example's replay tests, the redaction check and
 `make demo` on Python 3.10 to 3.13; the console's vitest suite and build (checking the
 committed build is current); and builds the wheel and the Docker image.
+
