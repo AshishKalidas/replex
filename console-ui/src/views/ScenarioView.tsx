@@ -31,7 +31,17 @@ async function load(source: DataSource, name: string): Promise<Loaded> {
 type Pending = "accept" | "discard" | null;
 
 /** The question a review ends with, and the two answers. One inline confirmation each. */
-function Decision({ source, name, onDone }: { source: DataSource; name: string; onDone: (message: string) => void }) {
+function Decision({
+  source,
+  name,
+  stopped,
+  onDone,
+}: {
+  source: DataSource;
+  name: string;
+  stopped: boolean;
+  onDone: (message: string) => void;
+}) {
   const [confirming, setConfirming] = useState<Pending>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +93,20 @@ function Decision({ source, name, onDone }: { source: DataSource; name: string; 
           Cancel
         </button>
       </div>
+    );
+  } else if (stopped) {
+    controls = (
+      <>
+        <p className="decision-note">
+          This run stopped early, so it cannot become the new recording. Fix the change and check again, or
+          re-record the scenario on purpose with <code>--replex-mode=rewrite</code>.
+        </p>
+        <div className="decision-buttons">
+          <button type="button" className="button button-secondary" onClick={() => setConfirming("discard")}>
+            Reject this run
+          </button>
+        </div>
+      </>
     );
   } else {
     controls = (
@@ -371,7 +395,12 @@ export function ScenarioView({ source, name }: { source: DataSource; name: strin
       {verdict === "same" ? (
         <p className="decision-note pending-note">Nothing to decide: this scenario behaves as recorded.</p>
       ) : (
-        <Decision source={source} name={name} onDone={done} />
+        <Decision
+          source={source}
+          name={name}
+          stopped={drift.report.findings.some((f) => f.check === "blocked_tool")}
+          onDone={done}
+        />
       )}
 
       {changes.length > 1 && (

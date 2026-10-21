@@ -19,7 +19,7 @@ from replex.cassette.storage import load
 from replex.drift.diff import TraceDiff, diff
 from replex.drift.judge import JudgeError, judge
 from replex.drift.policy import Checks, FinalOutputCheck, Policy, ToolArgsCheck
-from replex.errors import PolicyError
+from replex.errors import PolicyError, UnrecordedToolCall
 from replex.pricing import Pricing, format_usd
 from replex.providers import build_trace
 from replex.trace.model import ModelStep, ToolStep, Trace
@@ -476,6 +476,24 @@ def _check_latency(base: Trace, cand: Trace, checks: Checks) -> list[Finding]:
     ]
 
 
+def _check_blocked(cand: Trace, blocked: UnrecordedToolCall | None) -> list[Finding]:
+    if blocked is None:
+        return []
+    tool = blocked.tool or "a tool"
+    return [
+        Finding(
+            check="blocked_tool",
+            severity="fail",
+            message=(
+                f"the agent called {tool!r}, which is not marked safe and has no matching call "
+                f"in the recording, so RepleX did not run it and the run stopped there"
+            ),
+            step_index=cand.model_calls[-1].index if cand.model_calls else None,
+            after=tool,
+        )
+    ]
+
+
 def compare(
     baseline: TraceLike,
     candidate: TraceLike,
@@ -483,6 +501,7 @@ def compare(
     *,
     name: str | None = None,
     pricing: Pricing | None = None,
+    blocked: UnrecordedToolCall | None = None,
 ) -> DriftReport:
     """Compare a candidate run with its baseline and evaluate every policy check.
 
@@ -493,6 +512,8 @@ def compare(
         name: Cassette name used to pick per-cassette overrides (defaults to the baseline's).
         pricing: Prices for the ``cost`` check. By default traces keep the costs they carry and
             cassettes are priced with the built-in table.
+        blocked: The unrecorded tool call that stopped the candidate run, if one did. The run is
+            then incomplete, and the blocked call is reported as a failing finding.
     """
     from replex.drift.policy import load_policy
 
@@ -511,6 +532,7 @@ def compare(
         + _check_tokens(base, cand, checks)
         + _check_cost(base, cand, checks)
         + _check_latency(base, cand, checks)
+        + _check_blocked(cand, blocked)
     )
     report = DriftReport(
         name=key,

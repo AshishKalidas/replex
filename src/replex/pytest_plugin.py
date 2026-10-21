@@ -182,21 +182,31 @@ def _close(item: Any, exc: BaseException | None) -> Session | None:
     return session
 
 
+def _drift_failure(item: pytest.Item, session: Session) -> DriftDetected:
+    from replex.drift.output import drift_failure_message
+
+    report = session.drift_report
+    assert report is not None
+    item.add_report_section("call", "replex drift", report.to_markdown())
+    return DriftDetected(drift_failure_message(session.name, report, session.written_path))
+
+
 @pytest.hookimpl(wrapper=True)
 def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:
     try:
         result = yield
     except BaseException as exc:
-        _close(item, exc)
+        # A drift run stopped by a blocked tool call was compared on close: report that drift
+        # rather than the bare exception.
+        session = _close(item, exc)
+        if session is not None and session.drift_report is not None:
+            raise _drift_failure(item, session) from exc
         raise
     session = _close(item, None)
+    if session is not None and session.drift_report is not None and not session.drift_report.passed:
+        raise _drift_failure(item, session)
     if session is not None and session.drift_report is not None:
-        report = session.drift_report
-        item.add_report_section("call", "replex drift", report.to_markdown())
-        if not report.passed:
-            from replex.drift.output import drift_failure_message
-
-            raise DriftDetected(drift_failure_message(session.name, report, session.written_path))
+        item.add_report_section("call", "replex drift", session.drift_report.to_markdown())
     return result
 
 

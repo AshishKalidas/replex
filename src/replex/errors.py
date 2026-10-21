@@ -6,6 +6,8 @@ catches anything the library raises on purpose.
 
 from __future__ import annotations
 
+from typing import Any
+
 
 class ReplexError(Exception):
     """Base class for every error raised by RepleX."""
@@ -56,7 +58,15 @@ class UnusedRecording(ReplexError):
 
 
 class UnrecordedToolCall(ReplexError):
-    """A tool was called with arguments that have no recording and the tool may not run live."""
+    """A tool was called with arguments that have no recording and the tool may not run live.
+
+    ``tool`` and ``arguments`` name the blocked call.
+    """
+
+    def __init__(self, message: str, *, tool: str | None = None, arguments: Any = None) -> None:
+        super().__init__(message)
+        self.tool = tool
+        self.arguments = arguments
 
 
 class PolicyError(ReplexError):

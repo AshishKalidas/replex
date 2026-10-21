@@ -127,12 +127,17 @@ def promote_candidate(
 ) -> Path:
     """Make the candidate ``name`` the new baseline, then remove the candidate.
 
-    The candidate is validated first, so a broken file never becomes a baseline.
+    The candidate is validated first, so a broken file never becomes a baseline, and so is a
+    run that stopped early: it records the error that stopped it and is not a whole run.
     """
     src = cassette_path(candidate_dir, name)
     if not src.is_file():
         raise CassetteNotFound(f"no candidate {src}; run a drift check first")
-    load(src)
+    if getattr(load(src).meta, "error", None):
+        raise CassetteError(
+            f"the latest run of {name!r} stopped early, so it cannot become the recording. "
+            f"Fix the change and check again, or re-record on purpose with --replex-mode=rewrite."
+        )
     dst = atomic_write_text(cassette_path(baseline_dir, name), src.read_text(encoding="utf-8"))
     src.unlink()
     return dst

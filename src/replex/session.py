@@ -19,7 +19,13 @@ from replex.cassette.model import Cassette, CassetteMeta, CassetteUsage, Event
 from replex.cassette.storage import cassette_path, load, save
 from replex.config import MODES, Config, check_ci_guard, load_config
 from replex.consistency.runs import run_path
-from replex.errors import CassetteExists, CassetteNotFound, ConfigError, NoActiveSession
+from replex.errors import (
+    CassetteExists,
+    CassetteNotFound,
+    ConfigError,
+    NoActiveSession,
+    UnrecordedToolCall,
+)
 from replex.pricing import Pricing
 from replex.providers import build_trace, detect_provider
 from replex.redaction import RedactionRules, Redactor
@@ -232,7 +238,10 @@ class Session:
                 # One of several repeated runs: they are measured together, not judged alone.
                 self.outcome = "sampled"
                 return
-            if exc is not None:
+            blocked = None
+            if isinstance(exc, UnrecordedToolCall) and self.run_number is None:
+                blocked = exc
+            if exc is not None and blocked is None:
                 # A crashed run is not a behavioural comparison; keep the candidate to debug.
                 self.outcome = "error"
                 return
@@ -244,6 +253,7 @@ class Session:
                 self._trace,
                 policy,
                 name=self.name,
+                blocked=blocked,
             )
             self.outcome = "drift_passed" if self.drift_report.passed else "drift_failed"
             from replex.history import record_check

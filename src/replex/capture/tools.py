@@ -211,14 +211,25 @@ def _rebuild_exception(error: ToolError) -> BaseException:
 def _unrecorded(spec: ToolSpec, ctx: CaptureContext, args: dict[str, Any]) -> UnrecordedToolCall:
     recorded = ctx.recorded_tool_names(spec.name)
     shown = "\n".join(f"      {a}" for a in recorded[:5]) or "      (none)"
-    return UnrecordedToolCall(
-        f"tool {spec.name!r} was called with {ctx.redactor.fork().value(to_jsonable(args)[0])} "
-        f"but {ctx.cassette_label} has no unused recording with these arguments "
-        f"(tools mode: {ctx.tools_mode}).\n"
-        f"    recorded calls of {spec.name!r}:\n{shown}\n"
-        f"  In replay, tools never run live unless allowed. Re-record the cassette, mark the "
-        f"tool @replex.tool(safe=True) and use tools='auto', or use tools='live'."
-    )
+    redacted = ctx.redactor.fork().value(to_jsonable(args)[0])
+    if ctx.mode == "record":
+        # A drift run: the agent now does something the recording never did.
+        advice = (
+            f"tool {spec.name!r} was called with {redacted}, which {ctx.cassette_label} has no "
+            f"call for, and it is not marked safe=True, so RepleX did not run it.\n"
+            f"    recorded calls of {spec.name!r}:\n{shown}\n"
+            f"  The agent's behaviour changed. Review it with `replex console`; if the new "
+            f"behaviour is intended, re-record this scenario with --replex-mode=rewrite."
+        )
+    else:
+        advice = (
+            f"tool {spec.name!r} was called with {redacted} but {ctx.cassette_label} has no "
+            f"unused recording with these arguments (tools mode: {ctx.tools_mode}).\n"
+            f"    recorded calls of {spec.name!r}:\n{shown}\n"
+            f"  In replay, tools never run live unless allowed. Re-record the cassette, mark the "
+            f"tool @replex.tool(safe=True) and use tools='auto', or use tools='live'."
+        )
+    return UnrecordedToolCall(advice, tool=spec.name, arguments=redacted)
 
 
 def _lookup(spec: ToolSpec, ctx: CaptureContext, args: dict[str, Any]) -> ToolCallEvent | None:

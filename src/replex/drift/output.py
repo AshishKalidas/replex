@@ -19,7 +19,13 @@ def drift_failure_message(name: str, report: DriftReport, candidate: Path | None
     lines = [f"RepleX drift check failed for {name!r}:"]
     lines += [f"  [{f.check}] {f.message}" for f in report.failures]
     lines.append(f"  candidate: {candidate}")
-    lines.append(f"  approve it with: replex approve {name}")
+    if any(f.check == "blocked_tool" for f in report.failures):
+        lines.append(
+            "  the run stopped early, so it cannot be approved: fix the change, or re-record "
+            "this scenario on purpose with --replex-mode=rewrite"
+        )
+    else:
+        lines.append(f"  approve it with: replex approve {name}")
     return "\n".join(lines)
 
 

@@ -25,7 +25,16 @@ def get_order(order_id):
 def delete_order(order_id):
     return {"deleted": order_id}
 
+@replex.tool  # has side effects: never runs in drift unless the recording has the call
+def refund_order(order_id):
+    RAN.append("refund " + order_id)
+    return {"refunded": order_id}
+
 def script():
+    if os.environ.get("AGENT_VARIANT") == "v3":
+        return [MockReply(tool_calls=[MockToolCall("get_order", {"order_id": "1042"})]),
+                MockReply(tool_calls=[MockToolCall("refund_order", {"order_id": "1042"})]),
+                "Refunded straight away."]
     if os.environ.get("AGENT_VARIANT") == "v2":
         return [MockReply(tool_calls=[MockToolCall("get_order", {"order_id": "1042"})]),
                 MockReply(tool_calls=[MockToolCall("delete_order", {"order_id": "1042"})]),
@@ -33,7 +42,7 @@ def script():
     return [MockReply(tool_calls=[MockToolCall("get_order", {"order_id": "1042"})]),
             "Order 1042 has shipped."]
 
-TOOLS = {"get_order": get_order, "delete_order": delete_order}
+TOOLS = {"get_order": get_order, "delete_order": delete_order, "refund_order": refund_order}
 
 def run_agent(base):
     messages = [{"role": "user", "content": "Where is 1042?"}]
@@ -56,7 +65,7 @@ def base_url():
 @pytest.mark.replex(cassette="where_is_order")
 def test_where_is_order(replex_session, base_url):
     answer = run_agent(base_url)
-    assert "1042" in answer or "Deleted" in answer
+    assert "1042" in answer or "Deleted" in answer or "Refunded" in answer
     assert replex_session.trace.tool_names[0] == "get_order"
     if replex_session.mode == "replay":
         assert RAN == []
@@ -289,3 +298,24 @@ def test_square(n):
     res = project.runpytest_subprocess("-n", "2", "-p", "no:cacheprovider")
     res.assert_outcomes(passed=8)
     res.stdout.fnmatch_lines(["*replayed: 7*"])
+
+
+def test_drift_reports_a_blocked_tool_call_as_drift(
+    project: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The agent now calls a side-effecting tool the recording never did: blocked, and a failure
+    of the drift check (not a bare UnrecordedToolCall), which cannot be approved."""
+    project.runpytest("--replex-mode=record").assert_outcomes(passed=2)
+    monkeypatch.setenv("AGENT_VARIANT", "v3")
+    res = project.runpytest("--replex-mode=drift", "-k", "where_is_order")
+    res.assert_outcomes(failed=1)
+    res.stdout.fnmatch_lines(
+        [
+            "*DriftDetected*",
+            "*[[]blocked_tool[]] the agent called 'refund_order'*did not run it*",
+            "*cannot be approved*--replex-mode=rewrite*",
+            "*drift passed: 0 | drift failed: 1*",
+        ]
+    )
+    res.stdout.no_fnmatch_line("*replex approve where_is_order*")
+    assert cassette(project, sub=".replex/candidates").is_file()

@@ -74,6 +74,8 @@ function sentence(f: Finding, sequenceChanged: boolean): string | null {
     case "new_tools":
       // tool_sequence already names the new tools when both checks fire.
       return sequenceChanged ? null : `Now also uses ${quoted(strings(f.after))}.`;
+    case "blocked_tool":
+      return `Tried to use ${quoted([String(f.after)])}, which has side effects, so it was not run and the run stopped there.`;
     case "forbidden_tools":
       return `Used ${quoted([String(f.after)])}, which your policy forbids.`;
     case "tool_args": {
