@@ -17,6 +17,7 @@ from replex.capture.matching import drop_fields
 from replex.cassette.model import Cassette
 from replex.cassette.storage import load
 from replex.drift.diff import TraceDiff, diff
+from replex.drift.judge import JudgeError, judge
 from replex.drift.policy import Checks, FinalOutputCheck, Policy, ToolArgsCheck
 from replex.errors import PolicyError
 from replex.providers import build_trace
@@ -26,7 +27,10 @@ FindingSeverity = Literal["fail", "warn", "info"]
 
 
 class Finding(BaseModel):
-    """One policy-relevant difference between baseline and candidate."""
+    """One policy-relevant difference between baseline and candidate.
+
+    ``reason`` is the judge's explanation when ``final_output`` runs in ``judge`` mode.
+    """
 
     check: str
     severity: FindingSeverity
@@ -34,6 +38,7 @@ class Finding(BaseModel):
     step_index: int | None = None
     before: Any = None
     after: Any = None
+    reason: str | None = None
 
 
 class TraceSummary(BaseModel):
@@ -322,15 +327,18 @@ def _check_output(base: Trace, cand: Trace, checks: Checks, policy: Policy) -> l
     a, b = base.final_output, cand.final_output
     last = cand.model_calls[-1].index if cand.model_calls else None
 
-    def finding(message: str) -> list[Finding]:
+    def finding(
+        message: str, severity: FindingSeverity = c.severity, reason: str | None = None
+    ) -> list[Finding]:
         return [
             Finding(
                 check="final_output",
-                severity=c.severity,
+                severity=severity,
                 message=message,
                 step_index=last,
                 before=a,
                 after=b,
+                reason=reason,
             )
         ]
 
@@ -354,6 +362,23 @@ def _check_output(base: Trace, cand: Trace, checks: Checks, policy: Policy) -> l
         if errors:
             return finding("candidate final output violates the schema: " + "; ".join(errors[:3]))
         return []
+    if c.mode == "judge":
+        if a == b:
+            return []
+        try:
+            verdict = judge(a, b, c, policy.base_dir / c.judgements_dir)
+        except JudgeError as exc:
+            return finding(f"final output judge error: {exc}")
+        if verdict.equivalent:
+            return finding(
+                f"final output judged equivalent ({c.model}): {verdict.reason}",
+                severity="info",
+                reason=verdict.reason,
+            )
+        return finding(
+            f"final output means something different ({c.model}): {verdict.reason}",
+            reason=verdict.reason,
+        )
     score = similarity(a, b, c)
     if score < c.threshold:
         return finding(f"final output similarity {score:.2f} is below {c.threshold:.2f}")

@@ -37,6 +37,10 @@ Design choices worth knowing about, one line each: decision, reason.
 - **`latency` findings have severity `info` and cannot be set to `fail` or `warn`.** Timing depends on the network and the machine, not on the change under test.
 - **A drift run whose agent raised keeps its candidate but is not compared (outcome `error`).** A crash is a test failure, not behavioural drift.
 - **`replex approve` copies the candidate over the baseline, then deletes the candidate, and is refused in CI.** Approval is a local, reviewed act, and a stale candidate should not be approved twice.
+- **The `judge` output mode records each judgement as a RepleX cassette named by a hash of the whole judge request.** Re-checking the same pair is offline, free and repeatable, and any change to the model, criteria, prompt or answers asks again.
+- **Judge calls use the capture layer directly, not a session, so recording a judgement is not refused in CI.** A judgement is a cache of a verdict, not a baseline; a nightly drift job must be able to judge new answers.
+- **A judge reply is validated strictly, and only valid verdicts are stored.** A malformed reply or HTTP error becomes a finding with the check's severity and is retried next time, never a silent pass or a cached failure.
+- **An equivalent verdict is an `info` finding carrying the judge's reason.** Reviewers can see why a reworded answer passed.
 - **`replex report` exits 0 unless `--fail-on-drift` is given.** It is usually a reporting step after the tests already decided pass or fail.
 - **The GitHub Action comments only on `pull_request` events from the same repository, never via `pull_request_target`.** A fork's code must never run with a writable token or a secret.
 - **The action keeps one comment per project, found by a hidden marker naming its working directory, and edits it in place.** Re-runs should not bury a pull request in comments.

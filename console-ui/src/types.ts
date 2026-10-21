@@ -84,6 +84,8 @@ export interface Finding {
   step_index: number | null;
   before: unknown;
   after: unknown;
+  /** The judge model's explanation, for final_output in judge mode. */
+  reason?: string | null;
 }
 
 export interface TraceSummary {

@@ -58,13 +58,23 @@ class ForbiddenToolsCheck(_Check):
 
 
 class FinalOutputCheck(_Check):
-    """The final answer."""
+    """The final answer. ``judge`` asks a model whether the answers are equivalent."""
 
-    mode: Literal["exact", "json_equal", "json_schema", "similarity", "ignore"] = "similarity"
+    mode: Literal["exact", "json_equal", "json_schema", "similarity", "judge", "ignore"] = (
+        "similarity"
+    )
     threshold: float = Field(default=0.8, ge=0.0, le=1.0)
     schema_: dict[str, Any] | str | None = Field(default=None, alias="schema")
     similarity_backend: Literal["difflib", "embeddings"] = "difflib"
     embedding_model: str = "all-MiniLM-L6-v2"
+    model: str = Field(default="anthropic/claude-haiku-5.5", min_length=1)
+    criteria: str = Field(
+        default="Same decision and same facts for the user; wording and tone may differ.",
+        min_length=1,
+    )
+    base_url: str = "https://openrouter.ai/api/v1"
+    api_key_env: str = "OPENROUTER_API_KEY"
+    judgements_dir: str = "judgements"
     severity: Severity = "warn"
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
@@ -125,7 +135,7 @@ class Policy(BaseModel):
 
     @property
     def base_dir(self) -> Path:
-        """Directory that relative schema paths are resolved against."""
+        """Directory that relative schema and judgement paths are resolved against."""
         return self._base_dir
 
     def for_cassette(self, name: str) -> Checks:

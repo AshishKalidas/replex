@@ -5,6 +5,7 @@ import { actions, compareActions, customerMessage, reply } from "../src/story";
 import { filterRuns, formatDate, formatMs, formatTokens, inlineJson, lastMessageText, stepSubtitle, stepTitle, truncate } from "../src/format";
 import { href, parseRoute, type Route } from "../src/router";
 import { readableDiff, tokenize, wordDiff } from "../src/textdiff";
+import type { Finding } from "../src/types";
 import { payload, trace } from "./fixtures";
 
 describe("router", () => {
@@ -165,7 +166,7 @@ describe("explain", () => {
     before,
     after,
   });
-  const report = (findings: ReturnType<typeof finding>[], passed = !findings.some((f) => f.severity === "fail")) => ({
+  const report = (findings: Finding[], passed = !findings.some((f) => f.severity === "fail")) => ({
     ...payload().pairs[0]!.report,
     passed,
     findings,
@@ -208,6 +209,20 @@ describe("explain", () => {
     expect(explain(alone)).toEqual(["Now also uses “C”, “D” and “E”."]);
     const format = report([finding("final_output", "fail", "{}", "hi", "candidate final output is not valid JSON (json_schema)")]);
     expect(explain(format)).toEqual(["The final answer no longer has the required format."]);
+  });
+  it("gives the judge model's reason when the meaning changed", () => {
+    const judged = report([
+      {
+        ...finding("final_output", "fail", "a", "b", "final output means something different (m): drops the timeline"),
+        reason: "drops the 5-7 day timeline",
+      },
+    ]);
+    expect(explain(judged)).toEqual(["The final answer means something different: Drops the 5-7 day timeline."]);
+    const same = report([{ ...finding("final_output", "info", "a", "b", "judged equivalent"), reason: "Same refund." }]);
+    expect(explain(same)).toEqual([]);
+    expect(verdictOf(same)).toBe("same");
+    const error = report([finding("final_output", "warn", "a", "b", "final output judge error: OPENROUTER_API_KEY is not set")]);
+    expect(explain(error)).toEqual(["The final answer could not be checked: the judge model gave no verdict."]);
   });
   it("gives a verdict for every state", () => {
     expect(verdictOf(null)).toBe("pending");

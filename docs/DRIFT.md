@@ -144,6 +144,7 @@ The final answer. Default `{mode: similarity, threshold: 0.8, severity: warn}`.
 | `json_equal` | Both parse as JSON and are equal (key order and whitespace ignored) |
 | `json_schema` | The candidate parses as JSON and validates against `schema` (inline mapping or file path) |
 | `similarity` | Similarity ≥ `threshold` |
+| `judge` | A model judges the answers equivalent under your `criteria` ([below](#the-judge)) |
 | `ignore` | Always |
 
 JSON modes tolerate a surrounding Markdown code fence (```` ```json ... ``` ````). Schemas are
@@ -174,6 +175,98 @@ use cosine similarity of local sentence embeddings instead.
   ```text
   warn  final_output: final output similarity 0.27 is below 0.80
   ```
+
+#### The judge
+
+Text similarity is a weak proxy for meaning: the two refund answers in the `similarity` example
+above say the same thing and score 0.27. `mode: judge` asks a model instead.
+
+```yaml
+final_output:
+  mode: judge
+  model: anthropic/claude-haiku-5.5          # default
+  criteria: "Same decision and same facts for the customer; tone may differ."
+  severity: fail
+  # Defaults: OpenRouter, keyed by OPENROUTER_API_KEY, judgements next to the policy file.
+  base_url: https://openrouter.ai/api/v1      # any OpenAI-compatible chat completions API
+  api_key_env: OPENROUTER_API_KEY
+  judgements_dir: judgements                  # relative to the policy file
+```
+
+The judge gets a short fixed system prompt, your `criteria`, the recorded answer and the latest
+one, at temperature 0, and must reply with one JSON object:
+`{"equivalent": bool, "reason": str, "confidence": number between 0 and 1 (optional)}`. The
+reply is validated strictly (no missing, extra or mistyped fields). Identical answers pass
+without a call.
+
+| Outcome | Finding |
+|---|---|
+| Not equivalent | `severity` (as configured), with the judge's reason |
+| Equivalent | `info`, with the judge's reason; never fails |
+| No verdict (no key and no stored judgement, an HTTP error, a malformed reply) | `severity`, explaining what to do; never a silent pass |
+
+The reason is in the finding's message and its `reason` field. The console's review page and the
+HTML report say "The final answer means something different: *reason*".
+
+**Judgements are recorded and replayed.** Each judge call goes through RepleX's own capture
+into a cassette in `judgements_dir`, named after a hash of the whole judge request (model,
+criteria, prompt and both answers). The next evaluation of the same pair, by `replex drift`,
+`replex report`, the console or a drift test, replays the stored verdict: no network, no key,
+no cost, the same answer every time. Commit the directory, like your cassettes. Any change to an
+input is a new judgement. Malformed replies and HTTP errors are not stored, so the next run asks
+again. The key is redacted like any other, and your `redact_patterns` apply.
+
+A real judgement, from the example's refund scenario (`examples/support_agent/judgements/`,
+replayed offline by `tests/test_judge.py`). The v1 prompt answered:
+
+```json
+{"decision": "refund_requested", "refund_id": "RF-1042", "message": "I've requested refund RF-1042 for your Trail running shoes. It reaches your original payment method in 5-7 business days."}
+```
+
+and the v2 prompt:
+
+```json
+{"decision": "refund_requested", "refund_id": "RF-1042", "message": "Done! Refund RF-1042 is on its way for your Trail running shoes."}
+```
+
+Similarity cannot tell whether that matters. The judge can, and the answer depends on what you
+say matters:
+
+- **Pass**, with `criteria: "Same decision and same refund for the customer; tone and level of
+  detail may differ."`:
+
+  ```text
+  info  final_output: final output judged equivalent (anthropic/claude-haiku-5.5): Both answers
+        record the same decision (refund_requested) and the same refund ID (RF-1042) for the same
+        item; the latest message only differs in tone and omits the 5-7 day timeline, which the
+        criteria permit.
+  ```
+
+- **Fail**, with `criteria: "Same decision and the same facts for the customer, including when the
+  money arrives; tone may differ."`:
+
+  ```text
+  fail  final_output: final output means something different (anthropic/claude-haiku-5.5): Both
+        answers have the same decision and refund ID, but the latest message drops the recorded
+        fact that the money reaches the original payment method in 5-7 business days, and the
+        criteria require the same facts about when the money arrives.
+  ```
+
+Each of these calls used about 380 input and 95 to 210 output tokens and cost under $0.0002 on
+OpenRouter.
+
+Trade-offs:
+
+- **Cost.** Only new pairs cost anything: one small call per scenario whose answer changed, at
+  drift time. Replay, CI re-checks and the console are free once the judgement is committed.
+- **Determinism.** Temperature 0 makes a live judge consistent, not guaranteed identical across
+  providers or model updates; the recorded judgement is what makes a re-check exactly
+  repeatable. To re-judge on purpose, delete the judgement file or change the criteria.
+- **Trust.** A judge is a model and can be wrong. Write criteria that name what must not change
+  (the decision, amounts, dates, refusals), keep the deterministic checks (`tool_sequence`,
+  `tool_args`, `json_schema`) for what can be checked exactly, and read the reason in review.
+- **Privacy.** Both answers are sent to the judge's provider. Point `base_url` at a provider you
+  already trust with this data.
 
 ### `steps`
 

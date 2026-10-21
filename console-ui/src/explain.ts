@@ -50,6 +50,14 @@ function strings(value: unknown): string[] {
   return Array.isArray(value) ? value.map(String) : [];
 }
 
+/** Free text as one sentence: capitalised and ending in punctuation. */
+function asSentence(text: string): string {
+  const t = text.trim();
+  if (!t) return t;
+  const capitalised = t[0]!.toUpperCase() + t.slice(1);
+  return /[.!?]$/.test(capitalised) ? capitalised : `${capitalised}.`;
+}
+
 function sentence(f: Finding, sequenceChanged: boolean): string | null {
   switch (f.check) {
     case "tool_sequence": {
@@ -72,6 +80,10 @@ function sentence(f: Finding, sequenceChanged: boolean): string | null {
       return `Uses ${m ? quoted([m[1]!]) : "a tool"} with different inputs.`;
     }
     case "final_output": {
+      if (f.reason) return `The final answer means something different: ${asSentence(f.reason)}`;
+      if (f.message.startsWith("final output judge error")) {
+        return "The final answer could not be checked: the judge model gave no verdict.";
+      }
       if (f.message.includes("not valid JSON") || f.message.includes("violates the schema")) {
         return "The final answer no longer has the required format.";
       }
