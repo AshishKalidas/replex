@@ -179,8 +179,8 @@ Details in [docs/REDACTION.md](docs/REDACTION.md).
 
 - Replay checks **your code** against **recorded** model behaviour. It doesn't test the model;
   drift checks do that.
-- Model calls are captured through `httpx` and `httpx2` (the official Anthropic and OpenAI
-  SDKs, and anything built on either). `requests` and `aiohttp` are not captured.
+- Model calls are captured through `httpx`, `httpx2` (the official Anthropic and OpenAI SDKs),
+  `requests` and `aiohttp`, and anything built on them.
 - Tools are recorded when decorated with `@replex.tool` or wrapped with `replex.wrap_tools`.
 - Anthropic Messages and OpenAI-compatible chat completions are understood natively, streaming
   or not; other APIs are recorded and replayed as raw exchanges.

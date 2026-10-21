@@ -137,12 +137,18 @@ that actually executed (zero in a full replay).
 While a session is active RepleX installs its transport into the clients of `httpx` and, when
 it is installed, `httpx2` (**automatic mode**), so SDK clients are intercepted with no code
 changes. Current releases of the official Anthropic and OpenAI SDKs use `httpx2`; older
-releases use `httpx`. The test suite drives both real SDKs, sync, async and streaming, through
-a record and an offline replay, and drives plain `httpx` clients through every capture path. The patch is removed when the
-session ends, including on exceptions.
+releases use `httpx`. When `requests` or `aiohttp` (3.12 or newer) is installed, its traffic is
+captured too: `requests` through `HTTPAdapter.send`, `aiohttp` through a client middleware
+added innermost to each request. Every client goes through the same recording, matching and
+redaction code and writes the same cassette, so a recording made with one client replays
+through another when the requests match. The test suite drives both real SDKs, sync, async and
+streaming, through a record and an offline replay, and drives plain `httpx`, `requests` and
+`aiohttp` clients through every capture path. The patches are removed when the session ends,
+including on exceptions.
 
-If you prefer to be explicit, pass a RepleX client to the SDK and set `patch_httpx=False`. Use
-the library the SDK expects: `httpx2` for current SDKs, `httpx` (the default) for older ones.
+If you prefer to be explicit, pass a RepleX client to the SDK and set `patch_httpx=False`, which
+turns off all automatic capture, `requests` and `aiohttp` included. Use the library the SDK
+expects: `httpx2` for current SDKs, `httpx` (the default) for older ones.
 
 ```python
 client = anthropic.Anthropic(http_client=replex.http_client(library="httpx2"))

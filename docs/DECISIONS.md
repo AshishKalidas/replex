@@ -87,6 +87,7 @@ Design choices worth knowing about, one line each: decision, reason.
 ## Example, packaging and tooling
 
 - **Both `httpx` and `httpx2` are captured, with stream classes that subclass both libraries' bases and responses built by the request's own library.** The official SDKs moved to `httpx2`, while older SDK releases and plenty of other code still use `httpx`; supporting only one would leave many users uncaptured.
+- **`requests` and `aiohttp` are captured by converting their requests to `httpx.Request` objects and reusing the httpx transport code; `requests` through `HTTPAdapter.send`, `aiohttp` through a client middleware appended innermost by a thin `ClientSession._request` wrapper.** One code path for recording, matching and redaction keeps cassettes identical across clients; the middleware sees the fully built request and each redirect hop through public API, where wrapping all of `_request` would mean rebuilding aiohttp's request assembly. aiohttp before 3.12 has no middlewares and is not captured.
 - **The real Anthropic and OpenAI SDKs are dev dependencies, and tests record and replay through them.** Capture of the SDKs is the product's central promise; only the SDKs themselves can prove it.
 - **The example agent uses raw `httpx` rather than the provider SDKs.** No extra dependencies, and it shows that capture works below any SDK.
 - **The example is its own pytest project with its own `[tool.replex]`.** Its settings (cassette dir, mock host, custom redaction rule) do not leak into the library's tests.

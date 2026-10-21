@@ -51,6 +51,9 @@ dev = [
   # The official SDKs, so tests prove they are captured unchanged (httpx or httpx2).
   "anthropic>=0.40",
   "openai>=1.50",
+  # The other HTTP clients RepleX captures when they are installed.
+  "requests>=2.34",
+  "aiohttp>=3.12",
 ]
 
 [project.scripts]

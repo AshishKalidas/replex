@@ -21,13 +21,17 @@ It does **not** prove anything about the model:
 - `match: sequence` lets downstream code run against old responses after a request change. It
   tests that code, not the conversation: the responses no longer correspond to the requests.
 
-## Only `httpx` and `httpx2` are captured
+## Only `httpx`, `httpx2`, `requests` and `aiohttp` are captured
 
-RepleX intercepts the clients of `httpx` and, when installed, `httpx2`. The official `anthropic`
-and `openai` Python SDKs use one or the other depending on their version, as do many other
-libraries. Not captured:
+RepleX intercepts the clients of `httpx` and, when they are installed, `httpx2`, `requests` and
+`aiohttp` (3.12 or newer, which added client middlewares). The official `anthropic` and
+`openai` Python SDKs use `httpx` or `httpx2` depending on their version; many other agents and
+older SDKs use `requests` or `aiohttp`. All four record and replay with the same rules and write
+the same cassettes, so a recording made through one client replays through another. Not
+captured:
 
-- `requests`, `urllib3`, `aiohttp` and other HTTP clients;
+- `urllib3` or `http.client` used directly, `aiohttp` before 3.12, and other HTTP clients;
+- `requests` adapters that replace `HTTPAdapter.send` without calling it;
 - gRPC and WebSocket transports;
 - calls made from subprocesses or other languages.
 

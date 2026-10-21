@@ -182,6 +182,13 @@ class CaptureContext:
     def passes_through(self, url: httpx.URL) -> bool:
         return _host_matches(url, self.http.passthrough_hosts)
 
+    def sends_unchanged(self, url: httpx.URL) -> bool:
+        """Whether a request to ``url`` reaches the network untouched: neither captured nor
+        blocked."""
+        if self.intercepts(url):
+            return False
+        return self.mode == "record" or self.passes_through(url)
+
     def blocked(self, request: httpx.Request) -> NetworkBlocked:
         return NetworkBlocked(
             f"RepleX blocked {request.method} {request.url} during replay.\n"
