@@ -15,6 +15,13 @@ function section(route: Route): "overview" | "runs" | "compare" {
   return "overview";
 }
 
+/** A workspace's short name in the switcher: "Project", "Sample", or what a further sample shows. */
+export function switcherLabel(w: WorkspaceInfo): string {
+  if (w.id === "project") return "Project";
+  const subject = w.label.startsWith("Sample: ") ? w.label.slice("Sample: ".length) : "";
+  return subject ? subject.charAt(0).toUpperCase() + subject.slice(1) : "Sample";
+}
+
 interface Props {
   source: DataSource;
   /** The workspace being shown, when served by `replex console`. */
@@ -76,7 +83,7 @@ export function App({ source, workspace, workspaces = [], onSwitchWorkspace }: P
               <Segmented
                 label="Workspace"
                 value={workspace?.id ?? ""}
-                options={workspaces.map((w) => ({ id: w.id, label: w.id === "project" ? "Project" : "Sample" }))}
+                options={workspaces.map((w) => ({ id: w.id, label: switcherLabel(w) }))}
                 onChange={onSwitchWorkspace}
               />
             ) : (

@@ -260,14 +260,14 @@ def test_console_needs_extra_or_serves(project: Path, monkeypatch: pytest.Monkey
     res = run("console", "--no-open", "--port", "9999")
     assert res.exit_code == 0
     assert calls[0]["port"] == 9999 and calls[0]["host"] == "127.0.0.1"
-    project_ws, sample_ws = calls[0]["workspaces"]
+    project_ws, *samples = calls[0]["workspaces"]
     assert (project_ws.id, project_ws.writable) == ("project", True)
     assert project_ws.baseline_dir == project / "tests/cassettes"
     assert project_ws.candidate_dir == project / ".replex/candidates"
-    assert (sample_ws.id, sample_ws.writable) == ("sample", False)
+    assert [(w.id, w.writable) for w in samples] == [("sample", False), ("sample-models", False)]
 
     assert run("console", "--no-open", "--sample").exit_code == 0
-    assert [w.id for w in calls[1]["workspaces"]] == ["sample"]
+    assert [w.id for w in calls[1]["workspaces"]] == ["sample", "sample-models"]
     assert run("console", "--no-open", "--no-sample", "other").exit_code == 0
     assert [w.id for w in calls[2]["workspaces"]] == ["project"]
     assert calls[2]["workspaces"][0].baseline_dir == Path("other")

@@ -425,14 +425,14 @@ def approve_cmd(name: str, as_json: bool) -> None:
     "--sample",
     "sample_only",
     is_flag=True,
-    help="show only the bundled sample workspace (no project needed)",
+    help="show only the bundled sample workspaces (no project needed)",
 )
 @click.option(
     "--with-sample/--no-sample",
     "with_sample",
     default=True,
     show_default=True,
-    help="also offer the bundled sample workspace next to your project",
+    help="also offer the bundled sample workspaces next to your project",
 )
 @click.option("--port", default=8765, show_default=True, type=int)
 @click.option(
@@ -455,11 +455,11 @@ def console_cmd(
 ) -> None:
     """Serve the local read-only console for your project's cassettes (needs replex[console]).
 
-    DIRECTORY defaults to the configured cassette_dir. The bundled sample workspace is offered
+    DIRECTORY defaults to the configured cassette_dir. The bundled sample workspaces are offered
     next to it, so there is always something to explore.
     """
     try:
-        from replex.console.server import project_workspace, sample_workspace, serve
+        from replex.console.server import project_workspace, sample_workspaces, serve
     except ImportError as exc:  # pragma: no cover - depends on the optional extra
         raise click.ClickException(
             "the console needs the optional extra: pip install 'replex[console]'"
@@ -476,7 +476,7 @@ def console_cmd(
             )
         )
     if sample_only or with_sample:
-        workspaces.append(sample_workspace())
+        workspaces.extend(sample_workspaces())
     serve(  # pragma: no cover - long-running server
         workspaces=workspaces,
         host=host,

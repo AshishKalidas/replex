@@ -340,6 +340,17 @@ def test_mixed_and_empty_detection() -> None:
     )
 
 
+def test_gateways_are_named_by_host() -> None:
+    def chat(url: str) -> ExchangeEvent:
+        return exchange(url, {"messages": []}, {"object": "chat.completion", "choices": []})
+
+    via = chat("https://openrouter.ai/api/v1/chat/completions")
+    direct = chat("https://api.openai.com/v1/chat/completions")
+    assert detect_provider([via, via]) == ("openrouter", "openai")
+    assert detect_provider([direct]) == ("openai", "openai")
+    assert detect_provider([via, direct]) == ("openai", "openai")
+
+
 def test_tool_events_and_meta_provider() -> None:
     events: list[Any] = [
         exchange(

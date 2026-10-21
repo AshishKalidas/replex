@@ -51,7 +51,7 @@ SCENARIOS = [
         id="refund_ineligible_openai",
     ),
     pytest.param(
-        "Can you tell me the status of order 1043?",
+        SCENARIOS_BY_NAME["order_status_rephrased"].question,
         "openai",
         True,
         "info",

@@ -1,0 +1,20 @@
+# Drift policy for the support agent example.
+version: 1
+defaults:
+  tool_sequence: {mode: exact, severity: fail}
+  tool_args:
+    mode: exact
+    severity: fail
+    tools:
+      # Free text the model writes itself: a real model rewords it on every run.
+      create_refund_request: {ignore_keys: [reason]}
+      search_docs: {ignore_keys: [query]}
+  new_tools: {severity: fail}
+  forbidden_tools: {patterns: ["delete_*", "send_payment"], severity: fail}
+  final_output: {mode: similarity, threshold: 0.80, severity: warn}
+  steps: {max_increase: 1, severity: warn}
+  tokens: {max_increase_pct: 25, severity: warn}
+overrides:
+  refund_request:
+    # A refund decision must stay machine-readable, whatever the wording.
+    final_output: {mode: json_schema, schema: schemas/refund.json, severity: fail}

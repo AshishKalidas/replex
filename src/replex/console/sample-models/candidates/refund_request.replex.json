@@ -1,0 +1,990 @@
+{
+  "created_at": "2026-10-21T09:11:48Z",
+  "events": [
+    {
+      "duration_ms": 1387,
+      "index": 0,
+      "request": {
+        "body": {
+          "messages": [
+            {
+              "content": "You are the customer support agent for Acme Outdoor.\nAlways look up the order with get_order first.\nBefore creating any refund, ALWAYS call check_refund_policy with the order's category and days since delivery, and only call create_refund_request if the order is eligible.\nReply with a single JSON object and nothing else: {\"decision\": \"refund_requested\" | \"refund_denied\" | \"info\", \"refund_id\": string or null, \"message\": \"<one short paragraph for the customer>\"}.",
+              "role": "system"
+            },
+            {
+              "content": "Hi, I'd like a refund for order 1042 please, the shoes don't fit. My ticket is [REDACTED_TICKET_1], you can reach me at [REDACTED_EMAIL_1].",
+              "role": "user"
+            }
+          ],
+          "model": "anthropic/claude-haiku-5.5",
+          "tools": [
+            {
+              "function": {
+                "description": "Look up an order by its id.",
+                "name": "get_order",
+                "parameters": {
+                  "properties": {
+                    "order_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Check whether an order is eligible for a refund.",
+                "name": "check_refund_policy",
+                "parameters": {
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "days_since_delivery": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "category",
+                    "days_since_delivery"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Create a refund request for an order.",
+                "name": "create_refund_request",
+                "parameters": {
+                  "properties": {
+                    "amount": {
+                      "type": "number"
+                    },
+                    "order_id": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id",
+                    "amount",
+                    "reason"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Search the help-centre articles.",
+                "name": "search_docs",
+                "parameters": {
+                  "properties": {
+                    "query": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "query"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            }
+          ]
+        },
+        "body_encoding": "json",
+        "headers": {
+          "accept": "*/*",
+          "accept-encoding": "identity",
+          "authorization": "[REDACTED]",
+          "connection": "keep-alive",
+          "content-length": "1704",
+          "content-type": "application/json",
+          "host": "openrouter.ai",
+          "user-agent": "python-httpx/0.28.1"
+        },
+        "match_key": "sha256:ed6dadc2fc31ce2ad4c86ed68550b9a8de5b6d142d9b150074b0d6f8a49276bc",
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions"
+      },
+      "response": {
+        "body": {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": null,
+                "reasoning": null,
+                "refusal": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"order_id\": \"1042\"}",
+                      "name": "get_order"
+                    },
+                    "id": "toolu_01Be8JzSqGWdCNb8ejD98PMd",
+                    "index": 0,
+                    "type": "function"
+                  }
+                ]
+              },
+              "native_finish_reason": "tool_use"
+            }
+          ],
+          "created": 1792573903,
+          "id": "gen-1792573903-LjEdg4HDasugvJpHK3zk",
+          "model": "anthropic/claude-haiku-5.5",
+          "object": "chat.completion",
+          "provider": "Claude Platform on AWS",
+          "service_tier": "default",
+          "system_fingerprint": null,
+          "usage": {
+            "completion_tokens": 50,
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "image_tokens": 0,
+              "reasoning_tokens": 0
+            },
+            "cost": 0.000112,
+            "cost_details": {
+              "upstream_inference_completions_cost": 2.5e-05,
+              "upstream_inference_cost": 0.000112,
+              "upstream_inference_prompt_cost": 8.7e-05
+            },
+            "is_byok": false,
+            "prompt_tokens": 870,
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "video_tokens": 0
+            },
+            "total_tokens": 920
+          }
+        },
+        "body_encoding": "json",
+        "headers": {
+          "access-control-allow-origin": "*",
+          "access-control-expose-headers": "X-Generation-Id,X-Provider-Name,request-id,cf-ray",
+          "cf-ray": "a4df22eddc48750b-JNB",
+          "connection": "keep-alive",
+          "content-type": "application/json",
+          "date": "Wed, 21 Oct 2026 09:11:44 GMT",
+          "permissions-policy": "payment=(self \"https://checkout.stripe.com\" \"https://connect-js.stripe.com\" \"https://js.stripe.com\" \"https://*.js.stripe.com\" \"https://hooks.stripe.com\")",
+          "referrer-policy": "no-referrer, strict-origin-when-cross-origin",
+          "server": "cloudflare",
+          "set-cookie": "[REDACTED]",
+          "x-content-type-options": "nosniff",
+          "x-generation-id": "gen-1792573903-LjEdg4HDasugvJpHK3zk"
+        },
+        "status": 200,
+        "stream": null
+      },
+      "type": "exchange"
+    },
+    {
+      "args": {
+        "order_id": "1042"
+      },
+      "duration_ms": 0,
+      "error": null,
+      "index": 1,
+      "lossy": false,
+      "name": "get_order",
+      "result": {
+        "amount": 129.0,
+        "category": "footwear",
+        "currency": "EUR",
+        "customer_email": "[REDACTED_EMAIL_1]",
+        "days_since_delivery": 12,
+        "item": "Trail running shoes",
+        "order_id": "1042",
+        "status": "delivered"
+      },
+      "type": "tool_call"
+    },
+    {
+      "duration_ms": 1299,
+      "index": 2,
+      "request": {
+        "body": {
+          "messages": [
+            {
+              "content": "You are the customer support agent for Acme Outdoor.\nAlways look up the order with get_order first.\nBefore creating any refund, ALWAYS call check_refund_policy with the order's category and days since delivery, and only call create_refund_request if the order is eligible.\nReply with a single JSON object and nothing else: {\"decision\": \"refund_requested\" | \"refund_denied\" | \"info\", \"refund_id\": string or null, \"message\": \"<one short paragraph for the customer>\"}.",
+              "role": "system"
+            },
+            {
+              "content": "Hi, I'd like a refund for order 1042 please, the shoes don't fit. My ticket is [REDACTED_TICKET_1], you can reach me at [REDACTED_EMAIL_1].",
+              "role": "user"
+            },
+            {
+              "content": null,
+              "reasoning": null,
+              "refusal": null,
+              "role": "assistant",
+              "tool_calls": [
+                {
+                  "function": {
+                    "arguments": "{\"order_id\": \"1042\"}",
+                    "name": "get_order"
+                  },
+                  "id": "toolu_01Be8JzSqGWdCNb8ejD98PMd",
+                  "index": 0,
+                  "type": "function"
+                }
+              ]
+            },
+            {
+              "content": "{\"order_id\": \"1042\", \"customer_email\": \"[REDACTED_EMAIL_1]\", \"item\": \"Trail running shoes\", \"category\": \"footwear\", \"amount\": 129.0, \"currency\": \"EUR\", \"status\": \"delivered\", \"days_since_delivery\": 12}",
+              "role": "tool",
+              "tool_call_id": "toolu_01Be8JzSqGWdCNb8ejD98PMd"
+            }
+          ],
+          "model": "anthropic/claude-haiku-5.5",
+          "tools": [
+            {
+              "function": {
+                "description": "Look up an order by its id.",
+                "name": "get_order",
+                "parameters": {
+                  "properties": {
+                    "order_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Check whether an order is eligible for a refund.",
+                "name": "check_refund_policy",
+                "parameters": {
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "days_since_delivery": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "category",
+                    "days_since_delivery"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Create a refund request for an order.",
+                "name": "create_refund_request",
+                "parameters": {
+                  "properties": {
+                    "amount": {
+                      "type": "number"
+                    },
+                    "order_id": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id",
+                    "amount",
+                    "reason"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Search the help-centre articles.",
+                "name": "search_docs",
+                "parameters": {
+                  "properties": {
+                    "query": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "query"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            }
+          ]
+        },
+        "body_encoding": "json",
+        "headers": {
+          "accept": "*/*",
+          "accept-encoding": "identity",
+          "authorization": "[REDACTED]",
+          "connection": "keep-alive",
+          "content-length": "2234",
+          "content-type": "application/json",
+          "cookie": "[REDACTED]",
+          "host": "openrouter.ai",
+          "user-agent": "python-httpx/0.28.1"
+        },
+        "match_key": "sha256:8c38e7b000aab72e3bb29923eceac34411b749550a5ed83e855d30d1e1aae1fb",
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions"
+      },
+      "response": {
+        "body": {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": null,
+                "reasoning": null,
+                "refusal": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"category\": \"footwear\", \"days_since_delivery\": 12}",
+                      "name": "check_refund_policy"
+                    },
+                    "id": "toolu_01R3rBxUxWamywJwLMA5AuDq",
+                    "index": 0,
+                    "type": "function"
+                  }
+                ]
+              },
+              "native_finish_reason": "tool_use"
+            }
+          ],
+          "created": 1792573904,
+          "id": "gen-1792573904-Kgm4cYKYuJ0pEAnUOvtJ",
+          "model": "anthropic/claude-haiku-5.5",
+          "object": "chat.completion",
+          "provider": "Claude Platform on AWS",
+          "service_tier": "default",
+          "system_fingerprint": null,
+          "usage": {
+            "completion_tokens": 80,
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "image_tokens": 0,
+              "reasoning_tokens": 0
+            },
+            "cost": 0.000141,
+            "cost_details": {
+              "upstream_inference_completions_cost": 4e-05,
+              "upstream_inference_cost": 0.000141,
+              "upstream_inference_prompt_cost": 0.000101
+            },
+            "is_byok": false,
+            "prompt_tokens": 1010,
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "video_tokens": 0
+            },
+            "total_tokens": 1090
+          }
+        },
+        "body_encoding": "json",
+        "headers": {
+          "access-control-allow-origin": "*",
+          "access-control-expose-headers": "X-Generation-Id,X-Provider-Name,request-id,cf-ray",
+          "cf-ray": "a4df22f5eb3d750b-JNB",
+          "connection": "keep-alive",
+          "content-type": "application/json",
+          "date": "Wed, 21 Oct 2026 09:11:45 GMT",
+          "permissions-policy": "payment=(self \"https://checkout.stripe.com\" \"https://connect-js.stripe.com\" \"https://js.stripe.com\" \"https://*.js.stripe.com\" \"https://hooks.stripe.com\")",
+          "referrer-policy": "no-referrer, strict-origin-when-cross-origin",
+          "server": "cloudflare",
+          "x-content-type-options": "nosniff",
+          "x-generation-id": "gen-1792573904-Kgm4cYKYuJ0pEAnUOvtJ"
+        },
+        "status": 200,
+        "stream": null
+      },
+      "type": "exchange"
+    },
+    {
+      "args": {
+        "category": "footwear",
+        "days_since_delivery": 12
+      },
+      "duration_ms": 0,
+      "error": null,
+      "index": 3,
+      "lossy": false,
+      "name": "check_refund_policy",
+      "result": {
+        "eligible": true,
+        "reason": "within the 30-day window",
+        "window_days": 30
+      },
+      "type": "tool_call"
+    },
+    {
+      "duration_ms": 1367,
+      "index": 4,
+      "request": {
+        "body": {
+          "messages": [
+            {
+              "content": "You are the customer support agent for Acme Outdoor.\nAlways look up the order with get_order first.\nBefore creating any refund, ALWAYS call check_refund_policy with the order's category and days since delivery, and only call create_refund_request if the order is eligible.\nReply with a single JSON object and nothing else: {\"decision\": \"refund_requested\" | \"refund_denied\" | \"info\", \"refund_id\": string or null, \"message\": \"<one short paragraph for the customer>\"}.",
+              "role": "system"
+            },
+            {
+              "content": "Hi, I'd like a refund for order 1042 please, the shoes don't fit. My ticket is [REDACTED_TICKET_1], you can reach me at [REDACTED_EMAIL_1].",
+              "role": "user"
+            },
+            {
+              "content": null,
+              "reasoning": null,
+              "refusal": null,
+              "role": "assistant",
+              "tool_calls": [
+                {
+                  "function": {
+                    "arguments": "{\"order_id\": \"1042\"}",
+                    "name": "get_order"
+                  },
+                  "id": "toolu_01Be8JzSqGWdCNb8ejD98PMd",
+                  "index": 0,
+                  "type": "function"
+                }
+              ]
+            },
+            {
+              "content": "{\"order_id\": \"1042\", \"customer_email\": \"[REDACTED_EMAIL_1]\", \"item\": \"Trail running shoes\", \"category\": \"footwear\", \"amount\": 129.0, \"currency\": \"EUR\", \"status\": \"delivered\", \"days_since_delivery\": 12}",
+              "role": "tool",
+              "tool_call_id": "toolu_01Be8JzSqGWdCNb8ejD98PMd"
+            },
+            {
+              "content": null,
+              "reasoning": null,
+              "refusal": null,
+              "role": "assistant",
+              "tool_calls": [
+                {
+                  "function": {
+                    "arguments": "{\"category\": \"footwear\", \"days_since_delivery\": 12}",
+                    "name": "check_refund_policy"
+                  },
+                  "id": "toolu_01R3rBxUxWamywJwLMA5AuDq",
+                  "index": 0,
+                  "type": "function"
+                }
+              ]
+            },
+            {
+              "content": "{\"eligible\": true, \"window_days\": 30, \"reason\": \"within the 30-day window\"}",
+              "role": "tool",
+              "tool_call_id": "toolu_01R3rBxUxWamywJwLMA5AuDq"
+            }
+          ],
+          "model": "anthropic/claude-haiku-5.5",
+          "tools": [
+            {
+              "function": {
+                "description": "Look up an order by its id.",
+                "name": "get_order",
+                "parameters": {
+                  "properties": {
+                    "order_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Check whether an order is eligible for a refund.",
+                "name": "check_refund_policy",
+                "parameters": {
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "days_since_delivery": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "category",
+                    "days_since_delivery"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Create a refund request for an order.",
+                "name": "create_refund_request",
+                "parameters": {
+                  "properties": {
+                    "amount": {
+                      "type": "number"
+                    },
+                    "order_id": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id",
+                    "amount",
+                    "reason"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Search the help-centre articles.",
+                "name": "search_docs",
+                "parameters": {
+                  "properties": {
+                    "query": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "query"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            }
+          ]
+        },
+        "body_encoding": "json",
+        "headers": {
+          "accept": "*/*",
+          "accept-encoding": "identity",
+          "authorization": "[REDACTED]",
+          "connection": "keep-alive",
+          "content-length": "2659",
+          "content-type": "application/json",
+          "cookie": "[REDACTED]",
+          "host": "openrouter.ai",
+          "user-agent": "python-httpx/0.28.1"
+        },
+        "match_key": "sha256:a94e5f56a156d0eccf793170c00b6c57f3b6a2369fbccb9f443e905a16d6b69d",
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions"
+      },
+      "response": {
+        "body": {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": null,
+                "reasoning": null,
+                "refusal": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"order_id\": \"1042\", \"amount\": 129.0, \"reason\": \"Trail running shoes do not fit (ticket [REDACTED_TICKET_1])\"}",
+                      "name": "create_refund_request"
+                    },
+                    "id": "toolu_01BWSEfVWTssF7nz12uHHoho",
+                    "index": 0,
+                    "type": "function"
+                  }
+                ]
+              },
+              "native_finish_reason": "tool_use"
+            }
+          ],
+          "created": 1792573905,
+          "id": "gen-1792573905-Ij3IuSYIftcOdGc5UU9H",
+          "model": "anthropic/claude-haiku-5.5",
+          "object": "chat.completion",
+          "provider": "Claude Platform on AWS",
+          "service_tier": "default",
+          "system_fingerprint": null,
+          "usage": {
+            "completion_tokens": 120,
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "image_tokens": 0,
+              "reasoning_tokens": 0
+            },
+            "cost": 0.0001725,
+            "cost_details": {
+              "upstream_inference_completions_cost": 6e-05,
+              "upstream_inference_cost": 0.0001725,
+              "upstream_inference_prompt_cost": 0.0001125
+            },
+            "is_byok": false,
+            "prompt_tokens": 1125,
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "video_tokens": 0
+            },
+            "total_tokens": 1245
+          }
+        },
+        "body_encoding": "json",
+        "headers": {
+          "access-control-allow-origin": "*",
+          "access-control-expose-headers": "X-Generation-Id,X-Provider-Name,request-id,cf-ray",
+          "cf-ray": "a4df22fe0b5b750b-JNB",
+          "connection": "keep-alive",
+          "content-type": "application/json",
+          "date": "Wed, 21 Oct 2026 09:11:46 GMT",
+          "permissions-policy": "payment=(self \"https://checkout.stripe.com\" \"https://connect-js.stripe.com\" \"https://js.stripe.com\" \"https://*.js.stripe.com\" \"https://hooks.stripe.com\")",
+          "referrer-policy": "no-referrer, strict-origin-when-cross-origin",
+          "server": "cloudflare",
+          "x-content-type-options": "nosniff",
+          "x-generation-id": "gen-1792573905-Ij3IuSYIftcOdGc5UU9H"
+        },
+        "status": 200,
+        "stream": null
+      },
+      "type": "exchange"
+    },
+    {
+      "args": {
+        "amount": 129.0,
+        "order_id": "1042",
+        "reason": "Trail running shoes do not fit (ticket [REDACTED_TICKET_1])"
+      },
+      "duration_ms": 0,
+      "error": null,
+      "index": 5,
+      "lossy": false,
+      "name": "create_refund_request",
+      "result": {
+        "amount": 129.0,
+        "order_id": "1042",
+        "reason": "Trail running shoes do not fit (ticket [REDACTED_TICKET_1])",
+        "refund_id": "RF-1042",
+        "status": "requested"
+      },
+      "type": "tool_call"
+    },
+    {
+      "duration_ms": 1596,
+      "index": 6,
+      "request": {
+        "body": {
+          "messages": [
+            {
+              "content": "You are the customer support agent for Acme Outdoor.\nAlways look up the order with get_order first.\nBefore creating any refund, ALWAYS call check_refund_policy with the order's category and days since delivery, and only call create_refund_request if the order is eligible.\nReply with a single JSON object and nothing else: {\"decision\": \"refund_requested\" | \"refund_denied\" | \"info\", \"refund_id\": string or null, \"message\": \"<one short paragraph for the customer>\"}.",
+              "role": "system"
+            },
+            {
+              "content": "Hi, I'd like a refund for order 1042 please, the shoes don't fit. My ticket is [REDACTED_TICKET_1], you can reach me at [REDACTED_EMAIL_1].",
+              "role": "user"
+            },
+            {
+              "content": null,
+              "reasoning": null,
+              "refusal": null,
+              "role": "assistant",
+              "tool_calls": [
+                {
+                  "function": {
+                    "arguments": "{\"order_id\": \"1042\"}",
+                    "name": "get_order"
+                  },
+                  "id": "toolu_01Be8JzSqGWdCNb8ejD98PMd",
+                  "index": 0,
+                  "type": "function"
+                }
+              ]
+            },
+            {
+              "content": "{\"order_id\": \"1042\", \"customer_email\": \"[REDACTED_EMAIL_1]\", \"item\": \"Trail running shoes\", \"category\": \"footwear\", \"amount\": 129.0, \"currency\": \"EUR\", \"status\": \"delivered\", \"days_since_delivery\": 12}",
+              "role": "tool",
+              "tool_call_id": "toolu_01Be8JzSqGWdCNb8ejD98PMd"
+            },
+            {
+              "content": null,
+              "reasoning": null,
+              "refusal": null,
+              "role": "assistant",
+              "tool_calls": [
+                {
+                  "function": {
+                    "arguments": "{\"category\": \"footwear\", \"days_since_delivery\": 12}",
+                    "name": "check_refund_policy"
+                  },
+                  "id": "toolu_01R3rBxUxWamywJwLMA5AuDq",
+                  "index": 0,
+                  "type": "function"
+                }
+              ]
+            },
+            {
+              "content": "{\"eligible\": true, \"window_days\": 30, \"reason\": \"within the 30-day window\"}",
+              "role": "tool",
+              "tool_call_id": "toolu_01R3rBxUxWamywJwLMA5AuDq"
+            },
+            {
+              "content": null,
+              "reasoning": null,
+              "refusal": null,
+              "role": "assistant",
+              "tool_calls": [
+                {
+                  "function": {
+                    "arguments": "{\"order_id\": \"1042\", \"amount\": 129.0, \"reason\": \"Trail running shoes do not fit (ticket [REDACTED_TICKET_1])\"}",
+                    "name": "create_refund_request"
+                  },
+                  "id": "toolu_01BWSEfVWTssF7nz12uHHoho",
+                  "index": 0,
+                  "type": "function"
+                }
+              ]
+            },
+            {
+              "content": "{\"refund_id\": \"RF-1042\", \"order_id\": \"1042\", \"amount\": 129.0, \"reason\": \"Trail running shoes do not fit (ticket [REDACTED_TICKET_1])\", \"status\": \"requested\"}",
+              "role": "tool",
+              "tool_call_id": "toolu_01BWSEfVWTssF7nz12uHHoho"
+            }
+          ],
+          "model": "anthropic/claude-haiku-5.5",
+          "tools": [
+            {
+              "function": {
+                "description": "Look up an order by its id.",
+                "name": "get_order",
+                "parameters": {
+                  "properties": {
+                    "order_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Check whether an order is eligible for a refund.",
+                "name": "check_refund_policy",
+                "parameters": {
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "days_since_delivery": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "category",
+                    "days_since_delivery"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Create a refund request for an order.",
+                "name": "create_refund_request",
+                "parameters": {
+                  "properties": {
+                    "amount": {
+                      "type": "number"
+                    },
+                    "order_id": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id",
+                    "amount",
+                    "reason"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Search the help-centre articles.",
+                "name": "search_docs",
+                "parameters": {
+                  "properties": {
+                    "query": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "query"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            }
+          ]
+        },
+        "body_encoding": "json",
+        "headers": {
+          "accept": "*/*",
+          "accept-encoding": "identity",
+          "authorization": "[REDACTED]",
+          "connection": "keep-alive",
+          "content-length": "3223",
+          "content-type": "application/json",
+          "cookie": "[REDACTED]",
+          "host": "openrouter.ai",
+          "user-agent": "python-httpx/0.28.1"
+        },
+        "match_key": "sha256:05ae1c166ec785afeb9bf1a6467975e2b2a6635fbedd022fa26d9352bb96e2e6",
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions"
+      },
+      "response": {
+        "body": {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": "{\"decision\": \"refund_requested\", \"refund_id\": \"RF-1042\", \"message\": \"Your refund request for order 1042 has been submitted. The full amount of €129.00 for the trail running shoes is being refunded, since the order was delivered 12 days ago and falls within our 30-day footwear return window. Reference ticket [REDACTED_TICKET_1] and refund RF-1042 for your records.\"}",
+                "reasoning": null,
+                "refusal": null,
+                "role": "assistant"
+              },
+              "native_finish_reason": "end_turn"
+            }
+          ],
+          "created": 1792573906,
+          "id": "gen-1792573906-dOPNDTBOy0B2nPUGcLkC",
+          "model": "anthropic/claude-haiku-5.5",
+          "object": "chat.completion",
+          "provider": "Claude Platform on AWS",
+          "service_tier": "default",
+          "system_fingerprint": null,
+          "usage": {
+            "completion_tokens": 127,
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "image_tokens": 0,
+              "reasoning_tokens": 0
+            },
+            "cost": 0.0001951,
+            "cost_details": {
+              "upstream_inference_completions_cost": 6.35e-05,
+              "upstream_inference_cost": 0.0001951,
+              "upstream_inference_prompt_cost": 0.0001316
+            },
+            "is_byok": false,
+            "prompt_tokens": 1316,
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "video_tokens": 0
+            },
+            "total_tokens": 1443
+          }
+        },
+        "body_encoding": "json",
+        "headers": {
+          "access-control-allow-origin": "*",
+          "access-control-expose-headers": "X-Generation-Id,X-Provider-Name,request-id,cf-ray",
+          "cf-ray": "a4df23069c53750b-JNB",
+          "connection": "keep-alive",
+          "content-type": "application/json",
+          "date": "Wed, 21 Oct 2026 09:11:48 GMT",
+          "permissions-policy": "payment=(self \"https://checkout.stripe.com\" \"https://connect-js.stripe.com\" \"https://js.stripe.com\" \"https://*.js.stripe.com\" \"https://hooks.stripe.com\")",
+          "referrer-policy": "no-referrer, strict-origin-when-cross-origin",
+          "server": "cloudflare",
+          "x-content-type-options": "nosniff",
+          "x-generation-id": "gen-1792573906-dOPNDTBOy0B2nPUGcLkC"
+        },
+        "status": 200,
+        "stream": null
+      },
+      "type": "exchange"
+    }
+  ],
+  "meta": {
+    "git_sha": "13af83e",
+    "model": "anthropic/claude-haiku-5.5",
+    "provider": "openrouter",
+    "tags": [
+      "scenario=refund_request",
+      "wire=openai",
+      "stream=false",
+      "prompt=v1",
+      "host=openrouter.ai",
+      "base_url=https://openrouter.ai/api/v1",
+      "model=anthropic/claude-haiku-5.5",
+      "source=live"
+    ]
+  },
+  "name": "refund_request",
+  "replex_version": "0.1.0",
+  "schema_version": 1,
+  "usage": {
+    "input_tokens": 4321,
+    "output_tokens": 377
+  }
+}

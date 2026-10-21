@@ -15,7 +15,7 @@ which model ran, what it said, which tools it asked for and how many tokens it u
 | Normaliser | Wire format | Detected by | Used for |
 |---|---|---|---|
 | `AnthropicNormaliser` | Anthropic Messages API, `POST /v1/messages` | URL path, a `"type": "message"` response, or a stream starting with `message_start` | Claude (e.g. `claude-sonnet-5-5`) |
-| `OpenAICompatNormaliser` | OpenAI-compatible chat completions, `POST …/chat/completions` | URL path, a `chat.completion` response, or a stream of `chat.completion.chunk` | OpenAI and compatible endpoints (e.g. MiMo 2.6; the model id comes from your configuration) |
+| `OpenAICompatNormaliser` | OpenAI-compatible chat completions, `POST …/chat/completions` | URL path, a `chat.completion` response, or a stream of `chat.completion.chunk` | OpenAI and compatible endpoints (e.g. MiMo 2.6, or any model through OpenRouter; the model id comes from your configuration) |
 | `RawNormaliser` | Anything else | Fallback | Exposes each exchange as a model step without tool semantics, and says so in `trace.notes` |
 
 Both real normalisers handle **streaming and non-streaming** responses. For streams they
@@ -31,6 +31,33 @@ Remember to add the provider's host to `intercept_hosts`; only those hosts are r
 [tool.replex]
 intercept_hosts = ["api.anthropic.com", "api.openai.com", "llm.internal.example.com"]
 ```
+
+## OpenRouter
+
+[OpenRouter](https://openrouter.ai) serves many vendors' models behind one OpenAI-compatible
+endpoint, `https://openrouter.ai/api/v1`, so one key reaches Claude, GPT, Gemini and others and
+switching models is a change of model id. RepleX needs nothing special for it: intercept the
+host and the `OpenAICompatNormaliser` reads the exchanges.
+
+```toml
+[tool.replex]
+intercept_hosts = ["openrouter.ai"]
+```
+
+```python
+client = openai.OpenAI(base_url="https://openrouter.ai/api/v1", api_key=os.environ["OPENROUTER_API_KEY"])
+client.chat.completions.create(model="anthropic/claude-sonnet-5.5", messages=..., tools=...)
+```
+
+A recording made through OpenRouter has `"provider": "openrouter"` (the wire format is still
+`openai`), and its model is the id OpenRouter reports, such as `anthropic/claude-sonnet-5.5`.
+The `Authorization` header is redacted like any other credential. OpenRouter adds a `cost` to
+each response's `usage`, which stays in the cassette, so a recording shows what it cost.
+
+The example records through it with `make record-openrouter` (model from `MODEL=`, else
+`OPENROUTER_MODEL`, else `anthropic/claude-sonnet-5.5`) and runs real drift checks with
+`make drift-openrouter`; [WALKTHROUGH.md](WALKTHROUGH.md#with-a-real-model) shows what a prompt
+change and a model swap did there.
 
 ## The mock provider
 

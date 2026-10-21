@@ -58,6 +58,7 @@ Design choices worth knowing about, one line each: decision, reason.
 - **`replex console` binds 127.0.0.1 and has a `--host` option used only inside containers.** The console has no authentication; a container must listen on its own interface, and compose publishes it on the host's loopback only.
 - **The console only answers requests whose Host header is a loopback name.** Binding to 127.0.0.1 alone does not stop DNS rebinding from a web page.
 - **The console serves two workspaces: your project and a sample that ships in the package.** A first-time user sees the whole review flow before recording anything, and real mode stays one click away.
+- **A second bundled sample holds real recordings: Claude Sonnet 5.5's runs with Claude Haiku 5.5's as the latest runs.** The mock sample shows the mechanics; the real one shows that the same review works on a real model swap, and it is labelled with its real provider.
 - **The console can accept or discard a candidate in your project, and nothing else.** That is the decision a review ends in; recording stays in pytest. The sample is read-only.
 - **Write requests need an `x-replex-action` header and are refused in CI.** A cross-origin page cannot send the header without a CORS preflight the server never approves, and CI must never replace baselines.
 - **The console uses plain words: "recorded run" and "latest run", "behaviour changed" and "behaves as recorded".** The CLI and files keep baseline and candidate; people reviewing a change should not need that vocabulary.
@@ -74,6 +75,10 @@ Design choices worth knowing about, one line each: decision, reason.
 - **The example is its own pytest project with its own `[tool.replex]`.** Its settings (cassette dir, mock host, custom redaction rule) do not leak into the library's tests.
 - **The example's simulated model is a mock-provider responder that follows the system prompt.** The v1 → v2 prompt change produces a genuine behaviour change offline.
 - **Live recordings go to `cassettes/live/<provider>/` and replay through a separate, skip-if-empty test.** Real cassettes are kept apart from mock ones and are only made by the owner.
+- **A recording through a known gateway (OpenRouter) names the gateway as its provider, by request host.** The wire format alone would label it `openai` whatever model served it.
+- **Real-model drift checks against live recordings run every tool live and keep their candidates next to the recordings they were compared with.** The example's tools are an in-memory store, a real model's free-text arguments rarely match a recording, and the candidates are evidence worth committing.
+- **The example policy ignores `reason` and `query` in tool arguments.** A real model rewords free text on every run; without this, rerunning Sonnet with no change at all failed `tool_args`.
+- **OpenRouter recordings are filed by model (`cassettes/live/openrouter-<model>/`); the model id comes from `--model` or `OPENROUTER_MODEL`, defaulting to `anthropic/claude-sonnet-5.5`.** Through a gateway the model is what distinguishes one recording from another.
 - **Claude recordings default to `claude-sonnet-5-5` (overridable with `CLAUDE_MODEL`); the MiMo model id always comes from `MIMO_MODEL`.** MiMo ids change between releases and endpoints, so it is never hard-coded.
 - **A Dockerfile and compose file provide the demo, the console and the full test gate in containers.** Reproducible runs on machines without the right Python versions; they add no runtime features.
 - **The overhead benchmark reports the median of five runs, in nanoseconds.** Single runs are noisy on laptops and CI machines.

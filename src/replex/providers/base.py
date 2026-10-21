@@ -17,6 +17,9 @@ from replex.pricing import DEFAULT_PRICING, Pricing
 from replex.trace.model import ModelStep, ToolStep, Trace, Usage
 
 MOCK_HEADER = "x-replex-mock"
+#: Gateways that serve many vendors' models over one wire format, by host. A recording made
+#: through one names the gateway as its provider; the wire format alone would misattribute it.
+GATEWAY_HOSTS = {"openrouter.ai": "openrouter"}
 
 
 class Normaliser(ABC):
@@ -127,8 +130,9 @@ def normaliser_for(exchange: ExchangeEvent) -> Normaliser:
 def detect_provider(cassette_or_events: Cassette | list[Any]) -> tuple[str, str]:
     """``(provider, wire_format)`` for a set of events.
 
-    The provider is ``mock`` for anything served by RepleX's mock provider; otherwise it is
-    the wire format's name.
+    The provider is ``mock`` for anything served by RepleX's mock provider, the gateway's
+    name when every exchange went through a known gateway (``openrouter``), and otherwise the
+    wire format's name.
     """
     events = (
         cassette_or_events.events
@@ -140,8 +144,11 @@ def detect_provider(cassette_or_events: Cassette | list[Any]) -> tuple[str, str]
         return "none", "none"
     formats = sorted({normaliser_for(e).name for e in exchanges})
     wire = formats[0] if len(formats) == 1 else "mixed"
-    mock = any(MOCK_HEADER in e.response.headers for e in exchanges)
-    return ("mock" if mock else wire), wire
+    if any(MOCK_HEADER in e.response.headers for e in exchanges):
+        return "mock", wire
+    gateways = {GATEWAY_HOSTS.get(httpx.URL(e.request.url).host) for e in exchanges}
+    gateway = gateways.pop() if len(gateways) == 1 else None
+    return gateway or wire, wire
 
 
 def _final_output(steps: list[ModelStep]) -> str:

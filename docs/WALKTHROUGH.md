@@ -67,16 +67,16 @@ pytest
 ```
 
 ```text
-s........                                                                [100%]
+................................                                         [100%]
 ==================================== RepleX ====================================
 mode: replay | replayed: 4 | recorded: 0 | drift passed: 0 | drift failed: 0 | warnings: 0
-8 passed, 1 skipped in 0.44s
+32 passed in 1.72s
 ```
 
 In replay mode the agent is pointed at `http://127.0.0.1:9`, where nothing listens: every
 model response comes from the cassette. Tools are not executed either; the test asserts that no
-refund was created and that `replex_session.tool_executions == 0`. (The skipped test replays
-real-model cassettes from `cassettes/live/`, which only exist once the owner records them.)
+refund was created and that `replex_session.tool_executions == 0`. (Most of the tests replay
+the real-model recordings in `cassettes/live/`, described [below](#with-a-real-model).)
 
 ## Step 2: change the prompt and replay again
 
@@ -219,10 +219,71 @@ purpose with `pytest --replex-mode=rewrite`.)
 
 It exits non-zero if replay fails or if the v2 prompt unexpectedly passes the drift check.
 
+## With a real model
+
+Everything above uses the simulated model, so it is reproducible and free. The same scenarios
+have also been run against real models through [OpenRouter](PROVIDERS.md#openrouter), and the
+recordings are committed under `cassettes/live/openrouter-claude-sonnet-5.5/`. They replay
+offline in `tests/test_live_cassettes.py`, and the console's **Model swap** sample shows them
+(`replex console --sample`).
+
+The four scenarios are the customer messages in `support_agent/scenarios.py`: the refund for
+order 1042 (eligible), "Where is my order 1043?", the refund for order 2001 (45 days after
+delivery, so outside the window) and a rephrased order-status question.
+
+```bash
+export OPENROUTER_API_KEY=...
+make record-openrouter                                   # 1. Claude Sonnet 5.5, v1 prompt
+make drift-openrouter                                    # 2. the same again: the noise floor
+make drift-openrouter PROMPT=v2                          # 3. the prompt change
+make drift-openrouter MODEL=anthropic/claude-haiku-5.5   # 4. the model swap
+```
+
+Steps 2 to 4 compare against step 1's recordings under `replex.policy.yaml` and keep their
+latest runs in `cassettes/live/openrouter-claude-sonnet-5.5/candidates/<model>-<prompt>/`.
+Recording all of it cost about $0.10.
+
+These are single runs of each scenario, recorded once; a real model can behave differently on
+another day. What they showed:
+
+**Sonnet against itself (v1).** All four scenarios behave as recorded. It took the same tool
+path every time; the only differences were wording and the free-text arguments it writes
+itself (the `search_docs` query, the refund `reason`). That is why the example's policy ignores
+those two keys: without that, `tool_args` failed on a rerun with no change at all.
+
+**The v2 prompt with Sonnet: the regression is real.** In both refund scenarios Sonnet stopped
+calling `check_refund_policy` and called `search_docs` instead, exactly as the simulated model
+does:
+
+| Scenario | Recorded run (v1) | Latest run (v2) | Verdict |
+|---|---|---|---|
+| `refund_request` | get_order → check_refund_policy → create_refund_request | get_order → search_docs → create_refund_request | behaviour changed |
+| `refund_ineligible` | get_order → check_refund_policy | get_order → search_docs | behaviour changed |
+| `order_status` | get_order → search_docs | get_order | behaviour changed |
+| `order_status_rephrased` | get_order | get_order | behaves as recorded |
+
+The decisions themselves were still right: Sonnet read the 30-day window from the help centre,
+refunded order 1042 and refused order 2001. A test suite that checks only the outcome passes;
+the eligibility check the business relies on is gone all the same. For "Where is my order
+1043?", v2 also stopped looking up delivery times and wrapped its JSON answer in a Markdown code
+fence.
+
+**Swapping Sonnet for Haiku 5.5 (v1 prompt): mostly the same behaviour.** Haiku followed the
+v1 procedure in both refund flows, with the same tools and the same order id and amount, so
+those scenarios behave as recorded; only the wording differs (`final_output` similarity
+warnings between 0.32 and 0.43). The one change: for "Where is my order 1043?" Haiku answered
+from the order alone, where Sonnet had also searched the help centre and quoted the 3-5 day
+delivery time. Token use matched Sonnet's to within 1% wherever the tool path was the same.
+
+In these runs the cheaper model kept the refund procedure, while a one-line prompt edit broke it
+on the stronger one. Neither is predictable in advance, which is why both changes are worth a
+drift check before they ship.
+
 ## Recording real cassettes
 
 The committed cassettes come from the mock model. To record the same scenarios from real models
-(written to `cassettes/live/<provider>/`, secrets redacted before anything touches disk):
+(written to `cassettes/live/<target>/`, or `cassettes/live/openrouter-<model>/` through
+OpenRouter; secrets redacted before anything touches disk):
 
 ```bash
 export ANTHROPIC_API_KEY=...
@@ -230,7 +291,12 @@ make record-claude            # Claude Sonnet 5.5 (override with CLAUDE_MODEL)
 
 export MIMO_API_KEY=... MIMO_BASE_URL=... MIMO_MODEL=...
 make record-mimo              # MiMo 2.6 through its OpenAI-compatible endpoint
+
+export OPENROUTER_API_KEY=...
+make record-openrouter        # Claude Sonnet 5.5 through OpenRouter (MODEL=vendor/model to change)
 ```
+
+`python record_live.py --help` lists every option, including `--against` for a drift check.
 
 Once recorded, `tests/test_live_cassettes.py` replays them offline like any other cassette.
 These recordings are only ever made by the repository owner with their own keys.

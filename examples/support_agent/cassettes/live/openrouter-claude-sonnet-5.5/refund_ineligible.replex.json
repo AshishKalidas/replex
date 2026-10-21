@@ -1,0 +1,708 @@
+{
+  "created_at": "2026-10-21T09:10:59Z",
+  "events": [
+    {
+      "duration_ms": 2014,
+      "index": 0,
+      "request": {
+        "body": {
+          "messages": [
+            {
+              "content": "You are the customer support agent for Acme Outdoor.\nAlways look up the order with get_order first.\nBefore creating any refund, ALWAYS call check_refund_policy with the order's category and days since delivery, and only call create_refund_request if the order is eligible.\nReply with a single JSON object and nothing else: {\"decision\": \"refund_requested\" | \"refund_denied\" | \"info\", \"refund_id\": string or null, \"message\": \"<one short paragraph for the customer>\"}.",
+              "role": "system"
+            },
+            {
+              "content": "I want to return order 2001 for a refund, the watch is too big.",
+              "role": "user"
+            }
+          ],
+          "model": "anthropic/claude-sonnet-5.5",
+          "tools": [
+            {
+              "function": {
+                "description": "Look up an order by its id.",
+                "name": "get_order",
+                "parameters": {
+                  "properties": {
+                    "order_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Check whether an order is eligible for a refund.",
+                "name": "check_refund_policy",
+                "parameters": {
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "days_since_delivery": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "category",
+                    "days_since_delivery"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Create a refund request for an order.",
+                "name": "create_refund_request",
+                "parameters": {
+                  "properties": {
+                    "amount": {
+                      "type": "number"
+                    },
+                    "order_id": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id",
+                    "amount",
+                    "reason"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Search the help-centre articles.",
+                "name": "search_docs",
+                "parameters": {
+                  "properties": {
+                    "query": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "query"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            }
+          ]
+        },
+        "body_encoding": "json",
+        "headers": {
+          "accept": "*/*",
+          "accept-encoding": "identity",
+          "authorization": "[REDACTED]",
+          "connection": "keep-alive",
+          "content-length": "1636",
+          "content-type": "application/json",
+          "host": "openrouter.ai",
+          "user-agent": "python-httpx/0.28.1"
+        },
+        "match_key": "sha256:d66cd5097726db961c668ffc28bcd478ad42d426e8f25930040bdeabb50472dd",
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions"
+      },
+      "response": {
+        "body": {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": null,
+                "reasoning": null,
+                "refusal": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"order_id\": \"2001\"}",
+                      "name": "get_order"
+                    },
+                    "id": "toolu_01GiviWgHQKUeFBnpxYUGkRh",
+                    "index": 0,
+                    "type": "function"
+                  }
+                ]
+              },
+              "native_finish_reason": "tool_use"
+            }
+          ],
+          "created": 1792573853,
+          "id": "gen-1792573853-zRh2ztI1tjo0py6UHh2p",
+          "model": "anthropic/claude-sonnet-5.5",
+          "object": "chat.completion",
+          "provider": "Claude Platform on AWS",
+          "service_tier": "default",
+          "system_fingerprint": null,
+          "usage": {
+            "completion_tokens": 50,
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "image_tokens": 0,
+              "reasoning_tokens": 0
+            },
+            "cost": 0.00217,
+            "cost_details": {
+              "upstream_inference_completions_cost": 0.0005,
+              "upstream_inference_cost": 0.00217,
+              "upstream_inference_prompt_cost": 0.00167
+            },
+            "is_byok": false,
+            "prompt_tokens": 835,
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "video_tokens": 0
+            },
+            "total_tokens": 885
+          }
+        },
+        "body_encoding": "json",
+        "headers": {
+          "access-control-allow-origin": "*",
+          "access-control-expose-headers": "X-Generation-Id,X-Provider-Name,request-id,cf-ray",
+          "cf-ray": "a4df21bb19520de1-JNB",
+          "connection": "keep-alive",
+          "content-type": "application/json",
+          "date": "Wed, 21 Oct 2026 09:10:55 GMT",
+          "permissions-policy": "payment=(self \"https://checkout.stripe.com\" \"https://connect-js.stripe.com\" \"https://js.stripe.com\" \"https://*.js.stripe.com\" \"https://hooks.stripe.com\")",
+          "referrer-policy": "no-referrer, strict-origin-when-cross-origin",
+          "server": "cloudflare",
+          "set-cookie": "[REDACTED]",
+          "x-content-type-options": "nosniff",
+          "x-generation-id": "gen-1792573853-zRh2ztI1tjo0py6UHh2p"
+        },
+        "status": 200,
+        "stream": null
+      },
+      "type": "exchange"
+    },
+    {
+      "args": {
+        "order_id": "2001"
+      },
+      "duration_ms": 0,
+      "error": null,
+      "index": 1,
+      "lossy": false,
+      "name": "get_order",
+      "result": {
+        "amount": 349.0,
+        "category": "electronics",
+        "currency": "EUR",
+        "customer_email": "[REDACTED_EMAIL_1]",
+        "days_since_delivery": 45,
+        "item": "GPS watch",
+        "order_id": "2001",
+        "status": "delivered"
+      },
+      "type": "tool_call"
+    },
+    {
+      "duration_ms": 1877,
+      "index": 2,
+      "request": {
+        "body": {
+          "messages": [
+            {
+              "content": "You are the customer support agent for Acme Outdoor.\nAlways look up the order with get_order first.\nBefore creating any refund, ALWAYS call check_refund_policy with the order's category and days since delivery, and only call create_refund_request if the order is eligible.\nReply with a single JSON object and nothing else: {\"decision\": \"refund_requested\" | \"refund_denied\" | \"info\", \"refund_id\": string or null, \"message\": \"<one short paragraph for the customer>\"}.",
+              "role": "system"
+            },
+            {
+              "content": "I want to return order 2001 for a refund, the watch is too big.",
+              "role": "user"
+            },
+            {
+              "content": null,
+              "reasoning": null,
+              "refusal": null,
+              "role": "assistant",
+              "tool_calls": [
+                {
+                  "function": {
+                    "arguments": "{\"order_id\": \"2001\"}",
+                    "name": "get_order"
+                  },
+                  "id": "toolu_01GiviWgHQKUeFBnpxYUGkRh",
+                  "index": 0,
+                  "type": "function"
+                }
+              ]
+            },
+            {
+              "content": "{\"order_id\": \"2001\", \"customer_email\": \"[REDACTED_EMAIL_1]\", \"item\": \"GPS watch\", \"category\": \"electronics\", \"amount\": 349.0, \"currency\": \"EUR\", \"status\": \"delivered\", \"days_since_delivery\": 45}",
+              "role": "tool",
+              "tool_call_id": "toolu_01GiviWgHQKUeFBnpxYUGkRh"
+            }
+          ],
+          "model": "anthropic/claude-sonnet-5.5",
+          "tools": [
+            {
+              "function": {
+                "description": "Look up an order by its id.",
+                "name": "get_order",
+                "parameters": {
+                  "properties": {
+                    "order_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Check whether an order is eligible for a refund.",
+                "name": "check_refund_policy",
+                "parameters": {
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "days_since_delivery": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "category",
+                    "days_since_delivery"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Create a refund request for an order.",
+                "name": "create_refund_request",
+                "parameters": {
+                  "properties": {
+                    "amount": {
+                      "type": "number"
+                    },
+                    "order_id": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id",
+                    "amount",
+                    "reason"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Search the help-centre articles.",
+                "name": "search_docs",
+                "parameters": {
+                  "properties": {
+                    "query": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "query"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            }
+          ]
+        },
+        "body_encoding": "json",
+        "headers": {
+          "accept": "*/*",
+          "accept-encoding": "identity",
+          "authorization": "[REDACTED]",
+          "connection": "keep-alive",
+          "content-length": "2160",
+          "content-type": "application/json",
+          "cookie": "[REDACTED]",
+          "host": "openrouter.ai",
+          "user-agent": "python-httpx/0.28.1"
+        },
+        "match_key": "sha256:9b5b3c4c6256db718b7375873ab0abbb4cb5e69026ea59c952011bf34be21ddc",
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions"
+      },
+      "response": {
+        "body": {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": null,
+                "reasoning": null,
+                "refusal": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"category\": \"electronics\", \"days_since_delivery\": 45}",
+                      "name": "check_refund_policy"
+                    },
+                    "id": "toolu_01HAiHEqakZHQxmC4eMtmaVh",
+                    "index": 0,
+                    "type": "function"
+                  }
+                ]
+              },
+              "native_finish_reason": "tool_use"
+            }
+          ],
+          "created": 1792573855,
+          "id": "gen-1792573855-wLfB95DFw4kag1e4CVe7",
+          "model": "anthropic/claude-sonnet-5.5",
+          "object": "chat.completion",
+          "provider": "Claude Platform on AWS",
+          "service_tier": "default",
+          "system_fingerprint": null,
+          "usage": {
+            "completion_tokens": 80,
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "image_tokens": 0,
+              "reasoning_tokens": 0
+            },
+            "cost": 0.002746,
+            "cost_details": {
+              "upstream_inference_completions_cost": 0.0008,
+              "upstream_inference_cost": 0.002746,
+              "upstream_inference_prompt_cost": 0.001946
+            },
+            "is_byok": false,
+            "prompt_tokens": 973,
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "video_tokens": 0
+            },
+            "total_tokens": 1053
+          }
+        },
+        "body_encoding": "json",
+        "headers": {
+          "access-control-allow-origin": "*",
+          "access-control-expose-headers": "X-Generation-Id,X-Provider-Name,request-id,cf-ray",
+          "cf-ray": "a4df21c76c5c0de1-JNB",
+          "connection": "keep-alive",
+          "content-type": "application/json",
+          "date": "Wed, 21 Oct 2026 09:10:57 GMT",
+          "permissions-policy": "payment=(self \"https://checkout.stripe.com\" \"https://connect-js.stripe.com\" \"https://js.stripe.com\" \"https://*.js.stripe.com\" \"https://hooks.stripe.com\")",
+          "referrer-policy": "no-referrer, strict-origin-when-cross-origin",
+          "server": "cloudflare",
+          "x-content-type-options": "nosniff",
+          "x-generation-id": "gen-1792573855-wLfB95DFw4kag1e4CVe7"
+        },
+        "status": 200,
+        "stream": null
+      },
+      "type": "exchange"
+    },
+    {
+      "args": {
+        "category": "electronics",
+        "days_since_delivery": 45
+      },
+      "duration_ms": 0,
+      "error": null,
+      "index": 3,
+      "lossy": false,
+      "name": "check_refund_policy",
+      "result": {
+        "eligible": false,
+        "reason": "outside the 30-day window (45 days since delivery)",
+        "window_days": 30
+      },
+      "type": "tool_call"
+    },
+    {
+      "duration_ms": 1725,
+      "index": 4,
+      "request": {
+        "body": {
+          "messages": [
+            {
+              "content": "You are the customer support agent for Acme Outdoor.\nAlways look up the order with get_order first.\nBefore creating any refund, ALWAYS call check_refund_policy with the order's category and days since delivery, and only call create_refund_request if the order is eligible.\nReply with a single JSON object and nothing else: {\"decision\": \"refund_requested\" | \"refund_denied\" | \"info\", \"refund_id\": string or null, \"message\": \"<one short paragraph for the customer>\"}.",
+              "role": "system"
+            },
+            {
+              "content": "I want to return order 2001 for a refund, the watch is too big.",
+              "role": "user"
+            },
+            {
+              "content": null,
+              "reasoning": null,
+              "refusal": null,
+              "role": "assistant",
+              "tool_calls": [
+                {
+                  "function": {
+                    "arguments": "{\"order_id\": \"2001\"}",
+                    "name": "get_order"
+                  },
+                  "id": "toolu_01GiviWgHQKUeFBnpxYUGkRh",
+                  "index": 0,
+                  "type": "function"
+                }
+              ]
+            },
+            {
+              "content": "{\"order_id\": \"2001\", \"customer_email\": \"[REDACTED_EMAIL_1]\", \"item\": \"GPS watch\", \"category\": \"electronics\", \"amount\": 349.0, \"currency\": \"EUR\", \"status\": \"delivered\", \"days_since_delivery\": 45}",
+              "role": "tool",
+              "tool_call_id": "toolu_01GiviWgHQKUeFBnpxYUGkRh"
+            },
+            {
+              "content": null,
+              "reasoning": null,
+              "refusal": null,
+              "role": "assistant",
+              "tool_calls": [
+                {
+                  "function": {
+                    "arguments": "{\"category\": \"electronics\", \"days_since_delivery\": 45}",
+                    "name": "check_refund_policy"
+                  },
+                  "id": "toolu_01HAiHEqakZHQxmC4eMtmaVh",
+                  "index": 0,
+                  "type": "function"
+                }
+              ]
+            },
+            {
+              "content": "{\"eligible\": false, \"window_days\": 30, \"reason\": \"outside the 30-day window (45 days since delivery)\"}",
+              "role": "tool",
+              "tool_call_id": "toolu_01HAiHEqakZHQxmC4eMtmaVh"
+            }
+          ],
+          "model": "anthropic/claude-sonnet-5.5",
+          "tools": [
+            {
+              "function": {
+                "description": "Look up an order by its id.",
+                "name": "get_order",
+                "parameters": {
+                  "properties": {
+                    "order_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Check whether an order is eligible for a refund.",
+                "name": "check_refund_policy",
+                "parameters": {
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "days_since_delivery": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "category",
+                    "days_since_delivery"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Create a refund request for an order.",
+                "name": "create_refund_request",
+                "parameters": {
+                  "properties": {
+                    "amount": {
+                      "type": "number"
+                    },
+                    "order_id": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id",
+                    "amount",
+                    "reason"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Search the help-centre articles.",
+                "name": "search_docs",
+                "parameters": {
+                  "properties": {
+                    "query": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "query"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            }
+          ]
+        },
+        "body_encoding": "json",
+        "headers": {
+          "accept": "*/*",
+          "accept-encoding": "identity",
+          "authorization": "[REDACTED]",
+          "connection": "keep-alive",
+          "content-length": "2615",
+          "content-type": "application/json",
+          "cookie": "[REDACTED]",
+          "host": "openrouter.ai",
+          "user-agent": "python-httpx/0.28.1"
+        },
+        "match_key": "sha256:0a1f80a249a8fd4e9c1807c2198ccbfa31327000f55f71e9977b171c34bcb72e",
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions"
+      },
+      "response": {
+        "body": {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": "{\"decision\": \"refund_denied\", \"refund_id\": null, \"message\": \"I'm sorry, but order 2001 (GPS watch) can't be refunded. It was delivered 45 days ago, and our refund window for electronics is 30 days. If you'd like, I can help you look at other options, such as warranty or support articles.\"}",
+                "reasoning": null,
+                "refusal": null,
+                "role": "assistant"
+              },
+              "native_finish_reason": "end_turn"
+            }
+          ],
+          "created": 1792573857,
+          "id": "gen-1792573857-o9DYtiP7Fm45Y6nfDoDK",
+          "model": "anthropic/claude-sonnet-5.5",
+          "object": "chat.completion",
+          "provider": "Claude Platform on AWS",
+          "service_tier": "default",
+          "system_fingerprint": null,
+          "usage": {
+            "completion_tokens": 106,
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "image_tokens": 0,
+              "reasoning_tokens": 0
+            },
+            "cost": 0.003256,
+            "cost_details": {
+              "upstream_inference_completions_cost": 0.00106,
+              "upstream_inference_cost": 0.003256,
+              "upstream_inference_prompt_cost": 0.002196
+            },
+            "is_byok": false,
+            "prompt_tokens": 1098,
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "video_tokens": 0
+            },
+            "total_tokens": 1204
+          }
+        },
+        "body_encoding": "json",
+        "headers": {
+          "access-control-allow-origin": "*",
+          "access-control-expose-headers": "X-Generation-Id,X-Provider-Name,request-id,cf-ray",
+          "cf-ray": "a4df21d32fbc0de1-JNB",
+          "connection": "keep-alive",
+          "content-type": "application/json",
+          "date": "Wed, 21 Oct 2026 09:10:59 GMT",
+          "permissions-policy": "payment=(self \"https://checkout.stripe.com\" \"https://connect-js.stripe.com\" \"https://js.stripe.com\" \"https://*.js.stripe.com\" \"https://hooks.stripe.com\")",
+          "referrer-policy": "no-referrer, strict-origin-when-cross-origin",
+          "server": "cloudflare",
+          "x-content-type-options": "nosniff",
+          "x-generation-id": "gen-1792573857-o9DYtiP7Fm45Y6nfDoDK"
+        },
+        "status": 200,
+        "stream": null
+      },
+      "type": "exchange"
+    }
+  ],
+  "meta": {
+    "git_sha": "13af83e",
+    "model": "anthropic/claude-sonnet-5.5",
+    "provider": "openrouter",
+    "tags": [
+      "scenario=refund_ineligible",
+      "wire=openai",
+      "stream=false",
+      "prompt=v1",
+      "host=openrouter.ai",
+      "base_url=https://openrouter.ai/api/v1",
+      "model=anthropic/claude-sonnet-5.5",
+      "source=live"
+    ]
+  },
+  "name": "refund_ineligible",
+  "replex_version": "0.1.0",
+  "schema_version": 1,
+  "usage": {
+    "input_tokens": 2906,
+    "output_tokens": 236
+  }
+}

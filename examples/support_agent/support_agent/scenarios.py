@@ -22,6 +22,7 @@ SCENARIOS = [
     Scenario(
         "refund_ineligible", "I want to return order 2001 for a refund, the watch is too big."
     ),
+    Scenario("order_status_rephrased", "Can you tell me the status of order 1043?"),
 ]
 
 SCENARIOS_BY_NAME = {s.name: s for s in SCENARIOS}

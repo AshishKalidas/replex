@@ -1,10 +1,14 @@
 PY ?= python
 EXAMPLE := examples/support_agent
 SAMPLE := src/replex/console/sample
+SAMPLE_MODELS := src/replex/console/sample-models
+LIVE_SONNET := $(EXAMPLE)/cassettes/live/openrouter-claude-sonnet-5.5
+AGAINST ?= openrouter-claude-sonnet-5.5
 PYTHON_VERSIONS := 3.10 3.11 3.12 3.13
 
 .PHONY: help install test test-fast lint format typecheck build-console test-console e2e build demo \
-        record-claude record-mimo sample redact-check bench docker-build docker-test docker-matrix \
+        record-claude record-mimo record-openrouter drift-openrouter sample sample-models \
+        redact-check bench docker-build docker-test docker-matrix \
         docker-demo docker-console clean
 
 help: ## Show this help
@@ -55,9 +59,17 @@ sample: ## Rebuild the console's bundled sample workspace from the example (offl
 	cp $(EXAMPLE)/replex.policy.yaml $(SAMPLE)/
 	cp $(EXAMPLE)/schemas/refund.json $(SAMPLE)/schemas/
 
+sample-models: ## Rebuild the console's model-swap sample from the committed real recordings (offline)
+	rm -rf $(SAMPLE_MODELS) && mkdir -p $(SAMPLE_MODELS)/cassettes $(SAMPLE_MODELS)/candidates $(SAMPLE_MODELS)/schemas
+	cp $(LIVE_SONNET)/*.replex.json $(SAMPLE_MODELS)/cassettes/
+	cp $(LIVE_SONNET)/candidates/openrouter-claude-haiku-5.5-v1/*.replex.json $(SAMPLE_MODELS)/candidates/
+	cp $(EXAMPLE)/replex.policy.yaml $(SAMPLE_MODELS)/
+	cp $(EXAMPLE)/schemas/refund.json $(SAMPLE_MODELS)/schemas/
+
 redact-check: ## Scan every committed cassette for secrets / personal data
 	$(PY) -m replex.cli redact --check $(EXAMPLE)/cassettes
 	$(PY) -m replex.cli redact --check $(SAMPLE)
+	$(PY) -m replex.cli redact --check $(SAMPLE_MODELS)
 
 bench: ## Measure decorated-tool overhead outside a session
 	$(PY) -m pytest -q tests/test_benchmark.py -s
@@ -67,6 +79,12 @@ record-claude: ## Record REAL cassettes from Claude Sonnet 5.5 (needs ANTHROPIC_
 
 record-mimo: ## Record REAL cassettes from MiMo 2.6 (needs MIMO_API_KEY, MIMO_BASE_URL, MIMO_MODEL)
 	cd $(EXAMPLE) && $(PY) record_live.py mimo
+
+record-openrouter: ## Record REAL cassettes through OpenRouter (needs OPENROUTER_API_KEY; MODEL=vendor/model)
+	cd $(EXAMPLE) && $(PY) record_live.py openrouter $(if $(MODEL),--model $(MODEL))
+
+drift-openrouter: ## REAL drift check through OpenRouter against AGAINST= (MODEL=, PROMPT=v2 optional)
+	cd $(EXAMPLE) && $(PY) record_live.py openrouter --against $(AGAINST) $(if $(MODEL),--model $(MODEL)) $(if $(PROMPT),--prompt $(PROMPT))
 
 docker-build: ## Build the runtime image (console + CLI)
 	docker build -t replex:latest .

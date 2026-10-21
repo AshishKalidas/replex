@@ -2,7 +2,13 @@
 version: 1
 defaults:
   tool_sequence: {mode: exact, severity: fail}
-  tool_args: {mode: exact, severity: fail}
+  tool_args:
+    mode: exact
+    severity: fail
+    tools:
+      # Free text the model writes itself: a real model rewords it on every run.
+      create_refund_request: {ignore_keys: [reason]}
+      search_docs: {ignore_keys: [query]}
   new_tools: {severity: fail}
   forbidden_tools: {patterns: ["delete_*", "send_payment"], severity: fail}
   final_output: {mode: similarity, threshold: 0.80, severity: warn}

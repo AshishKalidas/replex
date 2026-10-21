@@ -191,7 +191,7 @@ More in [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 
 | | |
 |---|---|
-| [Walkthrough](docs/WALKTHROUGH.md) | The example agent, the prompt change and the drift it causes |
+| [Walkthrough](docs/WALKTHROUGH.md) | The example agent, the prompt change and the drift it causes, then a real prompt change and model swap |
 | [Concepts](docs/CONCEPTS.md) | Recordings, traces, modes, matching and the Python API |
 | [pytest](docs/PYTEST.md) | The marker, fixture, options and configuration |
 | [Drift](docs/DRIFT.md) | Every policy check, the console and approving changes |

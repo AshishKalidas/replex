@@ -20,6 +20,7 @@ fastapi = pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient  # noqa: E402
 
 from replex.console.server import (  # noqa: E402
+    BUNDLED_SAMPLES,
     SAMPLE,
     STATIC,
     Workspace,
@@ -27,6 +28,7 @@ from replex.console.server import (  # noqa: E402
     default_workspace,
     project_workspace,
     sample_workspace,
+    sample_workspaces,
 )
 
 LOCAL = "http://127.0.0.1:8765"
@@ -145,6 +147,59 @@ def test_sample_baselines_match_the_example() -> None:
     for f in sorted((SAMPLE / "cassettes").glob("*.replex.json")):
         if not f.name.startswith("."):
             assert f.read_bytes() == (example / f.name).read_bytes(), f.name
+
+
+def test_bundled_samples() -> None:
+    assert [(w.id, w.label) for w in sample_workspaces()] == [
+        ("sample", "Sample workspace"),
+        ("sample-models", "Sample: model swap"),
+    ]
+    assert not any(w.writable for w in sample_workspaces())
+    with pytest.raises(KeyError):
+        sample_workspace("nothing")
+
+
+def test_model_swap_sample_holds_real_recordings() -> None:
+    """Claude Sonnet 5.5's recordings, with Claude Haiku 5.5's runs as the latest runs.
+
+    Haiku follows the same procedure in both refund flows; it answers the first order-status
+    question without searching the help centre, where Sonnet did.
+    """
+    c = TestClient(create_app(sample_workspaces()), base_url=LOCAL)
+    rows = c.get("/api/w/sample-models/runs").json()["runs"]
+    assert {r["provider"] for r in rows} == {"openrouter"}
+    models = {(r["kind"], r["model"]) for r in rows}
+    assert models == {
+        ("baseline", "anthropic/claude-sonnet-5.5"),
+        ("candidate", "anthropic/claude-haiku-5.5"),
+    }
+    verdicts = {r["name"]: r["drift"] for r in rows if r["kind"] == "candidate"}
+    assert verdicts == {
+        "order_status": "failed",
+        "order_status_rephrased": "passed",
+        "refund_ineligible": "passed",
+        "refund_request": "passed",
+    }
+    report = c.get("/api/w/sample-models/drift/order_status").json()["report"]
+    assert [f["check"] for f in report["findings"] if f["severity"] == "fail"] == ["tool_sequence"]
+
+
+def test_model_swap_sample_matches_the_example() -> None:
+    """`make sample-models` copies the example's real recordings; they must not drift apart."""
+    live = (
+        Path(__file__).resolve().parents[1]
+        / "examples/support_agent/cassettes/live/openrouter-claude-sonnet-5.5"
+    )
+    root = BUNDLED_SAMPLES["sample-models"][1]
+    pairs = [
+        (root / "cassettes", live),
+        (root / "candidates", live / "candidates" / "openrouter-claude-haiku-5.5-v1"),
+    ]
+    for bundled, source in pairs:
+        files = [f for f in sorted(bundled.glob("*.replex.json")) if not f.name.startswith(".")]
+        assert len(files) == 4
+        for f in files:
+            assert f.read_bytes() == (source / f.name).read_bytes(), f.name
 
 
 ACT = {"x-replex-action": "1"}

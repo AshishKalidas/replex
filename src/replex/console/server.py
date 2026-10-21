@@ -1,7 +1,7 @@
 """The local, read-only console: a small FastAPI app over one or more workspaces.
 
 A workspace is a baseline directory, a candidate directory and a policy. The console serves
-your project's workspace and a bundled sample one. In your project it can also accept a
+your project's workspace and the bundled samples. In your project it can also accept a
 candidate as the new baseline, or discard it; everything else is read-only. It binds to
 127.0.0.1 by default, has no authentication, makes no external requests and sends no
 telemetry. Cassettes are redacted before they are written, so the console never sees secrets.
@@ -169,9 +169,9 @@ def _split(run_id: str) -> tuple[str, str]:
 class Workspace:
     """A set of baselines, candidates and a policy that the console can show.
 
-    ``project`` is your own repository (from ``[tool.replex]`` or the command line);
-    ``sample`` is the example that ships inside the package, so the console has something to
-    show before you have recorded anything.
+    ``project`` is your own repository (from ``[tool.replex]`` or the command line); the
+    samples ship inside the package, so the console has something to show before you have
+    recorded anything.
     """
 
     id: str
@@ -179,7 +179,7 @@ class Workspace:
     baseline_dir: Path
     candidate_dir: Path
     policy_path: Path | None = None
-    #: Whether the console may accept or discard candidates here (never for the sample).
+    #: Whether the console may accept or discard candidates here (never for a sample).
     writable: bool = False
     #: Prices used for costs; the built-in table when ``None``.
     pricing: Pricing | None = None
@@ -199,18 +199,34 @@ class Workspace:
         }
 
 
-SAMPLE = Path(__file__).parent / "sample"
+#: The samples that ship inside the package: workspace id -> (label, directory).
+BUNDLED_SAMPLES: dict[str, tuple[str, Path]] = {
+    "sample": ("Sample workspace", Path(__file__).parent / "sample"),
+    "sample-models": ("Sample: model swap", Path(__file__).parent / "sample-models"),
+}
+SAMPLE = BUNDLED_SAMPLES["sample"][1]
 
 
-def sample_workspace() -> Workspace:
-    """The bundled example: a support agent whose prompt change drifts in two scenarios."""
+def sample_workspace(sample_id: str = "sample") -> Workspace:
+    """A bundled sample, read-only.
+
+    ``sample`` is the support agent against the mock model, whose prompt change drifts in two
+    scenarios. ``sample-models`` holds real recordings from Claude Sonnet 5.5, with Claude Haiku
+    5.5's runs of the same scenarios as the latest runs.
+    """
+    label, root = BUNDLED_SAMPLES[sample_id]
     return Workspace(
-        id="sample",
-        label="Sample workspace",
-        baseline_dir=SAMPLE / "cassettes",
-        candidate_dir=SAMPLE / "candidates",
-        policy_path=SAMPLE / "replex.policy.yaml",
+        id=sample_id,
+        label=label,
+        baseline_dir=root / "cassettes",
+        candidate_dir=root / "candidates",
+        policy_path=root / "replex.policy.yaml",
     )
+
+
+def sample_workspaces() -> list[Workspace]:
+    """Every bundled sample, in the order the console offers them."""
+    return [sample_workspace(sample_id) for sample_id in BUNDLED_SAMPLES]
 
 
 def project_workspace(

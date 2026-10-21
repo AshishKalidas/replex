@@ -347,14 +347,16 @@ external URLs).
 
 ## The console
 
-`replex console` serves two workspaces, switched from the top bar:
+`replex console` serves your project and the bundled samples, switched from the top bar:
 
 - **Project**: your own recordings, from `[tool.replex]` (or `replex console DIR --candidates
   DIR --policy FILE`). It is read from disk each time you return to the window, so a new
   recording or drift run shows up without restarting anything.
-- **Sample**: a complete example that ships inside the package, so you can see the review flow
-  before recording anything. `replex console --sample` opens it on its own; `--no-sample`
-  hides it.
+- **Sample** and **Model swap**: complete examples that ship inside the package, so you can see
+  the review flow before recording anything. The first is the prompt change against the mock
+  model; the second holds real recordings from Claude Sonnet 5.5 with Claude Haiku 5.5's runs
+  of the same scenarios as the latest runs. `replex console --sample` opens them on their own;
+  `--no-sample` hides them.
 
 The **Overview** answers one question: does each scenario still behave as recorded? Each one
 gets a verdict (behaviour changed, small differences, behaves as recorded, not re-run yet) and a
