@@ -206,14 +206,16 @@ def _write_report(config: Config, names: list[str], path: Path) -> Path:
     from replex.drift.compare import compare
     from replex.drift.policy import Policy, load_policy
     from replex.drift.report import html_report, reports_markdown
+    from replex.pricing import Pricing
 
     policy = load_policy(config.policy_path) if config.policy_path.is_file() else Policy()
+    pricing = Pricing.from_config(config)
     reports = []
     for name in sorted(set(names)):
         base = cassette_path(config.cassette_path, name)
         cand = cassette_path(config.candidate_path, name)
         if base.is_file() and cand.is_file():
-            reports.append(compare(base, cand, policy, name=name))
+            reports.append(compare(base, cand, policy, name=name, pricing=pricing))
     suffix = path.suffix.lower()
     if suffix == ".md":
         text = reports_markdown(reports)

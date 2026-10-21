@@ -13,6 +13,7 @@ import httpx
 
 from replex.capture.matching import canonical_json
 from replex.cassette.model import Cassette, ExchangeEvent, StreamEvent, ToolCallEvent
+from replex.pricing import DEFAULT_PRICING, Pricing
 from replex.trace.model import ModelStep, ToolStep, Trace, Usage
 
 MOCK_HEADER = "x-replex-mock"
@@ -154,8 +155,12 @@ def _final_output(steps: list[ModelStep]) -> str:
     return ""
 
 
-def build_trace(cassette: Cassette) -> Trace:
-    """Build the provider-neutral trace of a cassette."""
+def build_trace(cassette: Cassette, *, pricing: Pricing | None = None) -> Trace:
+    """Build the provider-neutral trace of a cassette, priced with ``pricing``.
+
+    ``pricing`` defaults to the built-in price table; pass ``Pricing.from_config(config)`` to
+    include the prices from ``[tool.replex]``.
+    """
     steps: list[ModelStep | ToolStep] = []
     notes: list[str] = []
     raw_count = 0
@@ -196,7 +201,7 @@ def build_trace(cassette: Cassette) -> Trace:
     if cassette.meta.provider not in ("unknown", ""):
         provider = cassette.meta.provider
     model = next((m.model for m in models if m.model != "unknown"), cassette.meta.model)
-    return Trace(
+    trace = Trace(
         name=cassette.name,
         provider=provider,
         wire_format=wire,
@@ -207,3 +212,4 @@ def build_trace(cassette: Cassette) -> Trace:
         total_latency_ms=sum(s.latency_ms for s in steps),
         notes=notes,
     )
+    return (pricing or DEFAULT_PRICING).priced(trace)

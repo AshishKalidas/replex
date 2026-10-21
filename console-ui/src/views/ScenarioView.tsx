@@ -3,6 +3,7 @@ import type { DataSource } from "../api";
 import { Collapsible, DiffText, EmptyState, ErrorState, Loading, PageHead, Status, ToolChips } from "../components/common";
 import { explain, humanize, verdictOf, VERDICT_LABEL, VERDICT_TONE } from "../explain";
 import { actions, compareActions, customerMessage, reply, type Action } from "../story";
+import { formatCost } from "../cost";
 import { formatMs, formatTokens, inlineJson } from "../format";
 import { useAsync } from "../hooks";
 import { href } from "../router";
@@ -138,6 +139,7 @@ function Versus({ drift }: { drift: DriftResult }) {
     { label: "Tools, in order", before: <ToolChips names={b.tool_names} />, after: <ToolChips names={c.tool_names} highlight={fresh} /> },
     { label: "Steps", before: b.steps, after: c.steps },
     { label: "Tokens", before: formatTokens(b.input_tokens + b.output_tokens), after: formatTokens(c.input_tokens + c.output_tokens) },
+    { label: "Cost", before: formatCost(b.cost), after: formatCost(c.cost) },
     { label: "Latency", before: formatMs(b.latency_ms), after: formatMs(c.latency_ms) },
     { label: "Model", before: b.model, after: c.model },
   ];

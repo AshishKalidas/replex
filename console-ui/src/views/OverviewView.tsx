@@ -1,5 +1,6 @@
 import type { DataSource, WorkspaceInfo } from "../api";
 import { EmptyState, ErrorState, Loading, PageHead, Status } from "../components/common";
+import { costChange } from "../cost";
 import { headline, humanize, scenarios, verdictOf, VERDICT_LABEL, VERDICT_TONE, type Scenario } from "../explain";
 import { useAsync, useKeyNav } from "../hooks";
 import { href } from "../router";
@@ -170,6 +171,7 @@ export function OverviewView({
                 <div className="scenario-what">
                   {said.get(s.name) && <p className="scenario-said">“{said.get(s.name)}”</p>}
                   <p>{headline(report)}</p>
+                  {report && costChange(report) && <p className="quiet">{costChange(report)}</p>}
                 </div>
                 <div className="scenario-status">
                   <Status tone={VERDICT_TONE[verdict]}>{VERDICT_LABEL[verdict]}</Status>

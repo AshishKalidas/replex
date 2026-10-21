@@ -92,6 +92,7 @@ class OpenAICompatNormaliser(Normaliser):
         step.model = str(body.get("model") or step.model)
         step.stop_reason = str(choice.get("finish_reason") or "unknown")
         step.usage = self._usage(body.get("usage"))
+        step.reported_cost = self._reported_cost(body.get("usage"))
         return step
 
     @staticmethod
@@ -102,6 +103,14 @@ class OpenAICompatNormaliser(Normaliser):
             input_tokens=int(usage.get("prompt_tokens") or 0),
             output_tokens=int(usage.get("completion_tokens") or 0),
         )
+
+    @staticmethod
+    def _reported_cost(usage: Any) -> float | None:
+        """The cost some providers (OpenRouter) put in ``usage.cost``, in US dollars."""
+        cost = usage.get("cost") if isinstance(usage, dict) else None
+        if isinstance(cost, (int, float)) and not isinstance(cost, bool) and cost >= 0:
+            return float(cost)
+        return None
 
     def _from_stream(self, step: ModelStep, exchange: ExchangeEvent) -> ModelStep:
         texts: list[str] = []
@@ -116,6 +125,7 @@ class OpenAICompatNormaliser(Normaliser):
                 step.model = str(data["model"])
             if data.get("usage"):
                 step.usage = self._usage(data["usage"])
+                step.reported_cost = self._reported_cost(data["usage"])
             for choice in data.get("choices") or []:
                 if not isinstance(choice, dict) or choice.get("index", 0) != 0:
                     continue

@@ -35,6 +35,7 @@ from replex.config import check_ci_guard
 from replex.drift.compare import DriftReport, compare
 from replex.drift.policy import Policy, load_policy
 from replex.errors import RecordingRefused, ReplexError
+from replex.pricing import Pricing
 from replex.providers import build_trace
 from replex.trace.model import Trace
 
@@ -58,6 +59,7 @@ class _Store:
     baseline_dir: Path
     candidate_dir: Path
     policy_path: Path | None
+    pricing: Pricing | None = None
     # key -> (version stamp, value). One entry per key: a new stamp replaces the old value.
     _cache: dict[str, tuple[Any, Any]] = field(default_factory=dict)
 
@@ -99,7 +101,9 @@ class _Store:
     def trace(self, kind: str, name: str) -> Trace:
         p = self.path(kind, name)
         result: Trace = self._cached(
-            f"trace:{p}", _mtime(p), lambda: build_trace(self.cassette(kind, name))
+            f"trace:{p}",
+            _mtime(p),
+            lambda: build_trace(self.cassette(kind, name), pricing=self.pricing),
         )
         return result
 
@@ -147,6 +151,7 @@ def _summary(store: _Store, kind: str, path: Path) -> dict[str, Any]:
         "tool_calls": len(t.tool_calls),
         "tool_names": t.tool_names,
         "tokens": t.usage.total,
+        "cost": t.cost,
         "latency_ms": t.total_latency_ms,
         "drift": None if report is None else ("passed" if report.passed else "failed"),
         "warnings": 0 if report is None else len(report.warnings),
@@ -176,6 +181,8 @@ class Workspace:
     policy_path: Path | None = None
     #: Whether the console may accept or discard candidates here (never for the sample).
     writable: bool = False
+    #: Prices used for costs; the built-in table when ``None``.
+    pricing: Pricing | None = None
 
     def describe(self) -> dict[str, Any]:
         baselines = list_cassettes(self.baseline_dir)
@@ -207,9 +214,13 @@ def sample_workspace() -> Workspace:
 
 
 def project_workspace(
-    baseline_dir: Path, candidate_dir: Path, policy_path: Path | None = None
+    baseline_dir: Path,
+    candidate_dir: Path,
+    policy_path: Path | None = None,
+    *,
+    pricing: Pricing | None = None,
 ) -> Workspace:
-    """Your own cassettes, read live from disk."""
+    """Your own cassettes, read live from disk, priced with ``pricing``."""
     return Workspace(
         id="project",
         label="Your project",
@@ -217,6 +228,7 @@ def project_workspace(
         candidate_dir=Path(candidate_dir),
         policy_path=policy_path,
         writable=True,
+        pricing=pricing,
     )
 
 
@@ -243,7 +255,7 @@ def create_app(
         raise ValueError("the console needs at least one workspace")
     by_id = {ws.id: ws for ws in workspaces}
     stores = {
-        ws.id: _Store(Path(ws.baseline_dir), Path(ws.candidate_dir), ws.policy_path)
+        ws.id: _Store(Path(ws.baseline_dir), Path(ws.candidate_dir), ws.policy_path, ws.pricing)
         for ws in workspaces
     }
     app = FastAPI(

@@ -57,6 +57,11 @@ class ModelStep(_Model):
     error: str | None = None
     streamed: bool = False
     wire_format: str = "raw"
+    #: Cost in US dollars that the provider reported in the response, when it did.
+    reported_cost: float | None = None
+    #: Cost in US dollars: the reported cost, else tokens times the model's price.
+    #: ``None`` when the model has no known price.
+    cost: float | None = None
 
 
 class ToolStep(_Model):
@@ -89,6 +94,10 @@ class Trace(_Model):
     steps: list[Step] = Field(default_factory=list)
     final_output: str = ""
     usage: Usage = Field(default_factory=Usage)
+    #: Total cost in US dollars, or ``None`` when any model step has no known cost.
+    cost: float | None = None
+    #: Models that have no price, so the total cost is unknown.
+    unpriced_models: list[str] = Field(default_factory=list)
     total_latency_ms: int = 0
     notes: list[str] = Field(default_factory=list)
 

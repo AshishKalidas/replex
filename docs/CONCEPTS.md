@@ -56,7 +56,7 @@ preserved.
 Inspect cassettes from the terminal:
 
 ```bash
-replex ls tests/cassettes            # name, provider, model, steps, tool calls, tokens, date
+replex ls tests/cassettes            # name, provider, model, steps, tool calls, tokens, cost, date
 replex show refund_request           # step by step (--full for untruncated values, --json)
 ```
 
@@ -72,6 +72,7 @@ class ModelStep:   # one model call
     text: str                           # assistant text returned
     tool_requests: list[ToolRequest]    # id, name, args
     stop_reason: str; usage: Usage; latency_ms: int
+    cost: float | None                  # US dollars; None when the model has no known price
 
 class ToolStep:    # one tool execution
     index: int; name: str; args: dict; result: Any; error: str | None; latency_ms: int
@@ -81,6 +82,8 @@ class Trace:
     steps: list[ModelStep | ToolStep]
     final_output: str                   # text of the last model step that produced text
     usage: Usage; total_latency_ms: int
+    cost: float | None                  # total in US dollars, see COST.md
+    unpriced_models: list[str]          # why the cost is unknown, when it is
 ```
 
 Get one from a session (`s.trace`), from a cassette (`replex.load_trace(path)`) or in a test
@@ -234,6 +237,7 @@ Everything importable from `replex` is public; everything else is private.
 | `Trace`, `ModelStep`, `ToolStep`, `ToolRequest`, `Usage`, `load_trace` | The trace model |
 | `diff`, `TraceDiff` | Aligned step diff of two traces |
 | `compare`, `DriftReport`, `Finding`, `Policy`, `load_policy` | Drift ([DRIFT.md](DRIFT.md)) |
+| `Pricing` | Model prices and the cost of traces ([COST.md](COST.md)) |
 | `Config`, `load_config` | Configuration ([PYTEST.md](PYTEST.md#configuration)) |
 | `Normaliser`, `register_normaliser` | Provider support ([PROVIDERS.md](PROVIDERS.md)) |
 | `ReplexError` and subclasses | `CassetteError`, `CassetteExists`, `CassetteNotFound`, `UnsupportedSchemaVersion`, `ConfigError`, `PolicyError`, `ReplayMismatch`, `NetworkBlocked`, `UnusedRecording`, `UnrecordedToolCall`, `ReplayedToolError`, `RecordingRefused`, `SessionActive`, `NoActiveSession`, `DriftDetected` |

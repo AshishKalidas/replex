@@ -26,6 +26,7 @@ from replex.cassette.storage import (
 )
 from replex.config import Config, check_ci_guard, load_config
 from replex.errors import CassetteError, ReplexError
+from replex.pricing import Pricing, format_usd
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -98,7 +99,9 @@ def ls_cmd(directory: Path | None, as_json: bool) -> None:
     """List the cassettes in DIRECTORY (default: the configured cassette_dir)."""
     from replex.providers import build_trace
 
-    d = directory or _config().cassette_path
+    cfg = _config()
+    pricing = Pricing.from_config(cfg)
+    d = directory or cfg.cassette_path
     rows: list[dict[str, Any]] = []
     for path in list_cassettes(d):
         try:
@@ -106,7 +109,7 @@ def ls_cmd(directory: Path | None, as_json: bool) -> None:
         except CassetteError as exc:
             rows.append({"name": name_from_path(path), "error": str(exc)})
             continue
-        t = build_trace(c)
+        t = build_trace(c, pricing=pricing)
         rows.append(
             {
                 "name": c.name,
@@ -116,6 +119,7 @@ def ls_cmd(directory: Path | None, as_json: bool) -> None:
                 "steps": t.steps_count,
                 "tool_calls": len(t.tool_calls),
                 "tokens": t.usage.total,
+                "cost": t.cost,
                 "created_at": c.created_at,
             }
         )
@@ -126,11 +130,12 @@ def ls_cmd(directory: Path | None, as_json: bool) -> None:
         click.echo(f"no cassettes in {d}")
         return
     table = Table(title=f"cassettes in {d}", title_justify="left")
-    for col in ("name", "provider", "model", "steps", "tools", "tokens", "date"):
-        table.add_column(col, justify="right" if col in ("steps", "tools", "tokens") else "left")
+    for col in ("name", "provider", "model", "steps", "tools", "tokens", "cost", "date"):
+        numeric = col in ("steps", "tools", "tokens", "cost")
+        table.add_column(col, justify="right" if numeric else "left")
     for r in rows:
         if "error" in r:
-            table.add_row(r["name"], "[red]invalid[/red]", r["error"][:60], "", "", "", "")
+            table.add_row(r["name"], "[red]invalid[/red]", r["error"][:60], "", "", "", "", "")
             continue
         table.add_row(
             r["name"],
@@ -139,6 +144,7 @@ def ls_cmd(directory: Path | None, as_json: bool) -> None:
             str(r["steps"]),
             str(r["tool_calls"]),
             str(r["tokens"]),
+            format_usd(r["cost"]),
             r["created_at"],
         )
     _console().print(table)
@@ -158,7 +164,8 @@ def show_cmd(cassette: str, as_json: bool, full: bool) -> None:
     from replex.providers import build_trace
 
     cfg = _config()
-    trace = build_trace(load(_resolve(cassette, cfg.cassette_path, cfg.candidate_path)))
+    path = _resolve(cassette, cfg.cassette_path, cfg.candidate_path)
+    trace = build_trace(load(path), pricing=Pricing.from_config(cfg))
     if as_json:
         click.echo(trace.to_json())
         return
@@ -180,8 +187,9 @@ def diff_cmd(a: str, b: str, as_json: bool) -> None:
     from replex.providers import build_trace
 
     cfg = _config()
-    ta = build_trace(load(_resolve(a, cfg.cassette_path, cfg.candidate_path)))
-    tb = build_trace(load(_resolve(b, cfg.candidate_path, cfg.cassette_path)))
+    pricing = Pricing.from_config(cfg)
+    ta = build_trace(load(_resolve(a, cfg.cassette_path, cfg.candidate_path)), pricing=pricing)
+    tb = build_trace(load(_resolve(b, cfg.candidate_path, cfg.cassette_path)), pricing=pricing)
     d = diff(ta, tb)
     if as_json:
         _emit_json(d.model_dump(mode="json"))
@@ -215,7 +223,13 @@ def drift_cmd(
     cfg = _config()
     base = _resolve(baseline, cfg.cassette_path)
     cand = _resolve(candidate, cfg.candidate_path)
-    report = compare(base, cand, _policy(policy_path, cfg), name=name_from_path(base))
+    report = compare(
+        base,
+        cand,
+        _policy(policy_path, cfg),
+        name=name_from_path(base),
+        pricing=Pricing.from_config(cfg),
+    )
     if as_json:
         click.echo(report.to_json(), nl=False)
     elif as_markdown:
@@ -291,10 +305,11 @@ def report_cmd(
         raise click.UsageError("--link and --max-chars apply to --compact only")
     cfg = _config()
     policy = _policy(policy_path, cfg)
+    pricing = Pricing.from_config(cfg)
     baselines = {name_from_path(p): p for p in list_cassettes(baseline_dir)}
     candidates = {name_from_path(p): p for p in list_cassettes(candidate_dir)}
     reports = [
-        compare(baselines[name], cand, policy, name=name)
+        compare(baselines[name], cand, policy, name=name, pricing=pricing)
         for name, cand in candidates.items()
         if name in baselines
     ]
@@ -457,6 +472,7 @@ def console_cmd(
                 directory or cfg.cassette_path,
                 candidate_dir or cfg.candidate_path,
                 Path(policy_path) if policy_path else cfg.policy_path,
+                pricing=Pricing.from_config(cfg),
             )
         )
     if sample_only or with_sample:

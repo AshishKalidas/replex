@@ -26,6 +26,10 @@ export interface ModelStep {
   error: string | null;
   streamed: boolean;
   wire_format: string;
+  /** US dollars the provider reported, when it did. */
+  reported_cost?: number | null;
+  /** US dollars; null when the model has no known price. Absent in older reports. */
+  cost?: number | null;
 }
 
 export interface ToolStep {
@@ -48,6 +52,8 @@ export interface Trace {
   steps: Step[];
   final_output: string;
   usage: Usage;
+  cost?: number | null;
+  unpriced_models?: string[];
   total_latency_ms: number;
   notes: string[];
 }
@@ -98,6 +104,8 @@ export interface TraceSummary {
   output_tokens: number;
   latency_ms: number;
   final_output: string;
+  cost?: number | null;
+  unpriced_models?: string[];
 }
 
 export interface DriftReport {
@@ -123,6 +131,7 @@ export interface RunSummary {
   tool_calls?: number;
   tool_names?: string[];
   tokens?: number;
+  cost?: number | null;
   latency_ms?: number;
   drift?: "passed" | "failed" | null;
   warnings?: number;

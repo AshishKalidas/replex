@@ -17,6 +17,7 @@ from rich.text import Text
 
 from replex._version import __version__
 from replex.drift.diff import TraceDiff
+from replex.pricing import format_usd
 from replex.trace.model import ModelStep, ToolStep, Trace
 
 if TYPE_CHECKING:
@@ -52,12 +53,19 @@ def step_label(step: ModelStep | ToolStep | None) -> str:
 # ---------------------------------------------------------------------- terminal
 
 
+def _cost(amount: float | None, unpriced: list[str]) -> str:
+    if amount is not None or not unpriced:
+        return format_usd(amount)
+    return f"cost unknown (no price for {', '.join(unpriced)})"
+
+
 def render_trace(trace: Trace, console: Console, *, full: bool = False) -> None:
     """Step-by-step view of one trace."""
     head = Text.assemble(
         (trace.name, "bold"),
         f"  {trace.provider} / {trace.model}  ·  {trace.steps_count} steps  ·  "
-        f"{trace.usage.total} tokens  ·  {trace.total_latency_ms} ms",
+        f"{trace.usage.total} tokens  ·  {_cost(trace.cost, trace.unpriced_models)}  ·  "
+        f"{trace.total_latency_ms} ms",
     )
     console.print(head)
     width = None if full else 100
@@ -83,6 +91,7 @@ def render_trace(trace: Trace, console: Console, *, full: bool = False) -> None:
                 (f"{step.model} ", "bold magenta"),
                 (f"[{step.stop_reason}] ", "dim"),
                 (f"{step.usage.input_tokens}→{step.usage.output_tokens} tok", "dim"),
+                (f"  {format_usd(step.cost)}" if step.cost is not None else "", "dim"),
             )
             console.print(line)
             if step.error:
@@ -139,6 +148,7 @@ def render_report(report: DriftReport, console: Console) -> None:
     summary.add_row(
         "tokens", str(b.input_tokens + b.output_tokens), str(c.input_tokens + c.output_tokens)
     )
+    summary.add_row("cost", format_usd(b.cost), format_usd(c.cost))
     findings = Table(show_header=True, header_style="bold", expand=True)
     findings.add_column("severity", width=8)
     findings.add_column("check", width=16)
@@ -193,6 +203,7 @@ def report_markdown(report: DriftReport, *, heading_level: int = 3) -> str:
         f"| Steps | {b.steps} | {c.steps} |",
         f"| Tools | {_md(_arrow(b.tool_names))} | {_md(_arrow(c.tool_names))} |",
         f"| Tokens | {b.input_tokens + b.output_tokens} | {c.input_tokens + c.output_tokens} |",
+        f"| Cost | {_md(format_usd(b.cost))} | {_md(format_usd(c.cost))} |",
         f"| Final output | {_md(b.final_output, 80)} | {_md(c.final_output, 80)} |",
         "",
     ]

@@ -34,6 +34,11 @@ Design choices worth knowing about, one line each: decision, reason.
 - **`tool_args` compares executed tool steps; it falls back to the model's tool requests only when neither run executed any decorated tool.** Avoids double-reporting while still covering agents whose tools are not decorated.
 - **`tokens` is skipped when the baseline recorded no usage.** A percentage of zero is meaningless.
 - **`steps` counts model and tool steps and ignores decreases.** Doing less is not a regression this check should flag.
+- **A model with no known price makes the run's cost unknown, never estimated, and a step with no recorded tokens costs nothing.** A partial total or a guessed price would understate what a change costs.
+- **A cost the provider reported in the response (`usage.cost`) wins over the price table.** It already includes cache, routing and tier discounts the table cannot know.
+- **Model names are matched after dropping provider prefixes, `@version` and date suffixes, and writing dots as dashes.** One table entry then covers the first-party, OpenRouter and dated names of a model.
+- **The `cost` check reports the change as `info` when it is within the limit, and nothing when neither run has a known cost.** Teams change prompts and models to save money, so the saving is worth seeing; mock recordings stay free of noise.
+- **The `cost` check defaults to a 25% allowance with severity `warn`, like `tokens`.** Cost usually moves with tokens, and the two should not disagree by default.
 - **`latency` findings have severity `info` and cannot be set to `fail` or `warn`.** Timing depends on the network and the machine, not on the change under test.
 - **A drift run whose agent raised keeps its candidate but is not compared (outcome `error`).** A crash is a test failure, not behavioural drift.
 - **`replex approve` copies the candidate over the baseline, then deletes the candidate, and is refused in CI.** Approval is a local, reviewed act, and a stale candidate should not be approved twice.

@@ -19,6 +19,7 @@ from replex.cassette.model import Cassette, CassetteMeta, CassetteUsage, Event
 from replex.cassette.storage import cassette_path, load, save
 from replex.config import MODES, Config, check_ci_guard, load_config
 from replex.errors import CassetteExists, CassetteNotFound, ConfigError, NoActiveSession
+from replex.pricing import Pricing
 from replex.providers import build_trace, detect_provider
 from replex.redaction import RedactionRules, Redactor
 from replex.trace.model import Trace
@@ -94,6 +95,7 @@ class Session:
         self.patch_httpx = patch_httpx
         self.normalisers = list(normalisers)
         self.tags = list(tags)
+        self._pricing = Pricing.from_config(self.config)
         self.baseline: Cassette | None = None
         self.cassette: Cassette | None = None
         self.drift_report: Any = None
@@ -201,14 +203,14 @@ class Session:
         if mode == "replay":
             assert self.baseline is not None
             run = self._build(events, meta=self.baseline.meta.model_copy(deep=True))
-            self._trace = build_trace(run)
+            self._trace = build_trace(run, pricing=self._pricing)
             self.outcome = "replayed" if exc is None else "error"
             if exc is None:
                 ctx.check_unused()
             return
         cassette = self._build(events, error=exc)
         self.cassette = cassette
-        self._trace = build_trace(cassette)
+        self._trace = build_trace(cassette, pricing=self._pricing)
         if mode == "drift":
             from replex.drift.compare import compare
             from replex.drift.policy import Policy, load_policy
@@ -222,7 +224,10 @@ class Session:
             policy = load_policy(policy_file) if policy_file.is_file() else Policy()
             assert self.baseline is not None
             self.drift_report = compare(
-                build_trace(self.baseline), self._trace, policy, name=self.name
+                build_trace(self.baseline, pricing=self._pricing),
+                self._trace,
+                policy,
+                name=self.name,
             )
             self.outcome = "drift_passed" if self.drift_report.passed else "drift_failed"
             return
@@ -282,7 +287,9 @@ class Session:
             if self.mode == "replay" and self.baseline
             else None
         )
-        return build_trace(self._build(self._ctx.finished_events(), meta=meta))
+        return build_trace(
+            self._build(self._ctx.finished_events(), meta=meta), pricing=self._pricing
+        )
 
     @property
     def tool_executions(self) -> int:

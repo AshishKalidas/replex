@@ -38,6 +38,7 @@ defaults:
   final_output: {mode: similarity, threshold: 0.80, severity: warn}
   steps: {max_increase: 1, severity: warn}
   tokens: {max_increase_pct: 25, severity: warn}
+  cost: {max_increase_pct: 20, severity: warn}
 overrides:
   refund_request:
     final_output: {mode: json_schema, schema: schemas/refund.json, severity: fail}
@@ -291,6 +292,36 @@ Maximum percentage increase in total tokens (input plus output). Default
   ```text
   warn  tokens: tokens rose from 100 to 180 (+80%, allowed +25%)
   ```
+
+### `cost`
+
+Maximum percentage increase in the cost of a run, in US dollars. Default
+`{max_increase_pct: 25, severity: warn}`; `severity: ignore` hides it. Costs come from the
+recorded token counts and the model's price, or from the cost the provider reported (see
+[COST.md](COST.md)). Within the limit, the change is still reported, like latency.
+
+- **Pass** (reported only): the candidate switches to a cheaper model:
+
+  ```text
+  info  cost: cost $0.0500 -> $0.0030 (-94%) (reported only)
+  ```
+
+- **Warn** (`max_increase_pct: 20`): the candidate takes two extra model calls:
+
+  ```text
+  warn  cost: cost rose from $0.0100 to $0.0150 (+50%, allowed +20%)
+  ```
+
+- **Unknown**: a model has no price. Nothing is guessed; the finding says which model needs one
+  and the check cannot fail:
+
+  ```text
+  info  cost: cost of the candidate is unknown: no price for 'acme-large' (reported only)
+  ```
+
+  When neither run has a known cost (for example, recordings made with the mock provider), the
+  check reports nothing. A baseline that cost nothing is reported but never compared as a
+  percentage.
 
 ### `latency`
 

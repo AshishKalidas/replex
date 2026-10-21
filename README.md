@@ -196,6 +196,7 @@ More in [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 | [pytest](docs/PYTEST.md) | The marker, fixture, options and configuration |
 | [Drift](docs/DRIFT.md) | Every policy check, the console and approving changes |
 | [Redaction](docs/REDACTION.md) | Default rules, custom patterns and the check command |
+| [Cost](docs/COST.md) | Prices, the cost of each run and the cost drift check |
 | [Providers](docs/PROVIDERS.md) | Supported APIs, the mock provider and adding your own |
 | [CI](docs/CI.md) | A GitHub Actions workflow for replay and nightly drift checks, and an action that reviews behaviour on pull requests |
 | [Limitations](docs/LIMITATIONS.md) | What replay does and doesn't prove |

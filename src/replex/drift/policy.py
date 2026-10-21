@@ -94,6 +94,13 @@ class TokensCheck(_Check):
     severity: Severity = "warn"
 
 
+class CostCheck(_Check):
+    """Maximum percentage increase in cost. Within the limit, the change is reported only."""
+
+    max_increase_pct: float = Field(default=25.0, ge=0.0)
+    severity: Severity = "warn"
+
+
 class LatencyCheck(_Check):
     """Latency is reported only; it never fails. ``severity: ignore`` hides it."""
 
@@ -110,6 +117,7 @@ class Checks(_Check):
     final_output: FinalOutputCheck = Field(default_factory=FinalOutputCheck)
     steps: StepsCheck = Field(default_factory=StepsCheck)
     tokens: TokensCheck = Field(default_factory=TokensCheck)
+    cost: CostCheck = Field(default_factory=CostCheck)
     latency: LatencyCheck = Field(default_factory=LatencyCheck)
 
 

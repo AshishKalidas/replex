@@ -1,4 +1,5 @@
 // Plain-language summaries of drift reports, for people who did not write the policy.
+import { costChangePct } from "./cost";
 import type { DriftReport, Finding, RunSummary } from "./types";
 
 /** "refund_ineligible_openai" -> "Refund ineligible openai". The raw name is shown alongside. */
@@ -99,12 +100,16 @@ function sentence(f: Finding, sequenceChanged: boolean): string | null {
       const pct = before ? Math.round(((after - before) / before) * 100) : 0;
       return `Uses ${pct}% more tokens.`;
     }
+    case "cost": {
+      const pct = costChangePct(f.before, f.after);
+      return pct === null ? "Costs more per run." : `Costs ${pct}% more per run.`;
+    }
     default:
       return null;
   }
 }
 
-/** One sentence per meaningful difference, most important first. Latency is left out. */
+/** One sentence per meaningful difference, most important first. Reported-only findings are left out. */
 export function explain(report: DriftReport): string[] {
   const out: string[] = [];
   const order = ["fail", "warn"];

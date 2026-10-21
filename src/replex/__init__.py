@@ -42,6 +42,7 @@ from replex.errors import (
     UnsupportedSchemaVersion,
     UnusedRecording,
 )
+from replex.pricing import Pricing
 from replex.providers import Normaliser, register_normaliser
 from replex.session import Session, current_session, session
 from replex.trace.model import ModelStep, ToolRequest, ToolStep, Trace, Usage
@@ -75,6 +76,7 @@ __all__ = [
     "Normaliser",
     "Policy",
     "PolicyError",
+    "Pricing",
     "RecordingRefused",
     "ReplayMismatch",
     "ReplayedToolError",

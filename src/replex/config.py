@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 
 from replex.capture.matching import DEFAULT_IGNORE_FIELDS
 from replex.errors import ConfigError, RecordingRefused
+from replex.pricing import ModelPrice
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -52,6 +53,7 @@ class Config(BaseModel):
     redact_paths: list[str] = Field(default_factory=list)
     policy: str = "replex.policy.yaml"
     strict_unused: bool = True
+    prices: dict[str, ModelPrice] = Field(default_factory=dict)
     root: str = "."
 
     @field_validator("mode", "match", "tools", mode="before")

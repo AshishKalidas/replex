@@ -20,6 +20,7 @@ from replex.drift.diff import TraceDiff, diff
 from replex.drift.judge import JudgeError, judge
 from replex.drift.policy import Checks, FinalOutputCheck, Policy, ToolArgsCheck
 from replex.errors import PolicyError
+from replex.pricing import Pricing, format_usd
 from replex.providers import build_trace
 from replex.trace.model import ModelStep, ToolStep, Trace
 
@@ -53,6 +54,8 @@ class TraceSummary(BaseModel):
     output_tokens: int
     latency_ms: int
     final_output: str
+    cost: float | None = None
+    unpriced_models: list[str] = Field(default_factory=list)
 
     @classmethod
     def of(cls, trace: Trace) -> TraceSummary:
@@ -67,6 +70,8 @@ class TraceSummary(BaseModel):
             output_tokens=trace.usage.output_tokens,
             latency_ms=trace.total_latency_ms,
             final_output=trace.final_output,
+            cost=trace.cost,
+            unpriced_models=trace.unpriced_models,
         )
 
 
@@ -127,13 +132,17 @@ class DriftReport(BaseModel):
 TraceLike = Trace | Cassette | str | os.PathLike[str]
 
 
-def as_trace(value: TraceLike) -> Trace:
-    """Accept a trace, a cassette or a cassette path."""
+def as_trace(value: TraceLike, pricing: Pricing | None = None) -> Trace:
+    """Accept a trace, a cassette or a cassette path.
+
+    With ``pricing``, the result is priced with it; otherwise a given trace keeps its costs and
+    a cassette is priced with the built-in table.
+    """
     if isinstance(value, Trace):
-        return value
+        return pricing.priced(value) if pricing is not None else value
     if isinstance(value, Cassette):
-        return build_trace(value)
-    return build_trace(load(Path(value)))
+        return build_trace(value, pricing=pricing)
+    return build_trace(load(Path(value)), pricing=pricing)
 
 
 # ---------------------------------------------------------------------- checks
@@ -425,6 +434,32 @@ def _check_tokens(base: Trace, cand: Trace, checks: Checks) -> list[Finding]:
     ]
 
 
+def _unknown_cost(trace: Trace) -> str:
+    models = ", ".join(repr(m) for m in trace.unpriced_models)
+    return f"no price for {models}" if models else "not priced"
+
+
+def _check_cost(base: Trace, cand: Trace, checks: Checks) -> list[Finding]:
+    c = checks.cost
+    a, b = base.cost, cand.cost
+    if c.severity == "ignore" or (a is None and b is None):
+        return []
+    if a is None or b is None:
+        side, trace = ("baseline", base) if a is None else ("candidate", cand)
+        message = f"cost of the {side} is unknown: {_unknown_cost(trace)} (reported only)"
+        return [Finding(check="cost", severity="info", message=message, before=a, after=b)]
+    pct = (b - a) / a * 100 if a else None
+    if pct is not None and pct > c.max_increase_pct:
+        message = (
+            f"cost rose from {format_usd(a)} to {format_usd(b)} "
+            f"(+{pct:.0f}%, allowed +{c.max_increase_pct:g}%)"
+        )
+        return [Finding(check="cost", severity=c.severity, message=message, before=a, after=b)]
+    pct_text = f" ({pct:+.0f}%)" if pct is not None else ""
+    message = f"cost {format_usd(a)} -> {format_usd(b)}{pct_text} (reported only)"
+    return [Finding(check="cost", severity="info", message=message, before=a, after=b)]
+
+
 def _check_latency(base: Trace, cand: Trace, checks: Checks) -> list[Finding]:
     if checks.latency.severity == "ignore":
         return []
@@ -447,6 +482,7 @@ def compare(
     policy: Policy | str | os.PathLike[str] | None = None,
     *,
     name: str | None = None,
+    pricing: Pricing | None = None,
 ) -> DriftReport:
     """Compare a candidate run with its baseline and evaluate every policy check.
 
@@ -455,11 +491,13 @@ def compare(
         candidate: The fresh run.
         policy: A :class:`Policy`, a path to a policy YAML file, or ``None`` for defaults.
         name: Cassette name used to pick per-cassette overrides (defaults to the baseline's).
+        pricing: Prices for the ``cost`` check. By default traces keep the costs they carry and
+            cassettes are priced with the built-in table.
     """
     from replex.drift.policy import load_policy
 
     pol = policy if isinstance(policy, Policy) else load_policy(policy)
-    base, cand = as_trace(baseline), as_trace(candidate)
+    base, cand = as_trace(baseline, pricing), as_trace(candidate, pricing)
     key = name or base.name
     checks = pol.for_cassette(key)
     d = diff(base, cand)
@@ -471,6 +509,7 @@ def compare(
         + _check_output(base, cand, checks, pol)
         + _check_steps(base, cand, checks)
         + _check_tokens(base, cand, checks)
+        + _check_cost(base, cand, checks)
         + _check_latency(base, cand, checks)
     )
     report = DriftReport(

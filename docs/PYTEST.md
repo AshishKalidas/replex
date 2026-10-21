@@ -93,6 +93,7 @@ redact_patterns = []                      # see docs/REDACTION.md
 redact_paths = []
 policy = "replex.policy.yaml"
 strict_unused = true
+prices = {}                               # $ per million tokens; see docs/COST.md
 ```
 
 | Environment variable | Setting |
