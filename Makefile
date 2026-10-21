@@ -3,7 +3,7 @@ EXAMPLE := examples/support_agent
 SAMPLE := src/replex/console/sample
 PYTHON_VERSIONS := 3.10 3.11 3.12 3.13
 
-.PHONY: help install test test-fast lint format typecheck build-console test-console build demo \
+.PHONY: help install test test-fast lint format typecheck build-console test-console e2e build demo \
         record-claude record-mimo sample redact-check bench docker-build docker-test docker-matrix \
         docker-demo docker-console clean
 
@@ -37,6 +37,9 @@ build-console: ## Build the React console into src/replex/console/static
 
 test-console: ## Run the console's vitest suite
 	cd console-ui && npm ci && npm test
+
+e2e: build-console ## Run the console's end-to-end browser tests (Playwright, Chromium)
+	cd console-ui && npx playwright install chromium && REPLEX_PYTHON="$(PY)" npm run e2e
 
 build: ## Build sdist and wheel into dist/
 	$(PY) -m build

@@ -1,0 +1,590 @@
+{
+  "created_at": "2026-10-15T09:42:30Z",
+  "events": [
+    {
+      "duration_ms": 1,
+      "index": 0,
+      "request": {
+        "body": {
+          "messages": [
+            {
+              "content": "You are the fast, friendly customer support agent for Acme Outdoor. Customers hate waiting.\nLook up the order with get_order. If you need policy details, use search_docs, then act right away without extra checks.\nReply with a single JSON object and nothing else: {\"decision\": \"refund_requested\" | \"refund_denied\" | \"info\", \"refund_id\": string or null, \"message\": \"<one short paragraph for the customer>\"}.",
+              "role": "system"
+            },
+            {
+              "content": "I want to return order 2001 for a refund, the watch is too big.",
+              "role": "user"
+            }
+          ],
+          "model": "mock-mimo",
+          "tools": [
+            {
+              "function": {
+                "description": "Look up an order by its id.",
+                "name": "get_order",
+                "parameters": {
+                  "properties": {
+                    "order_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Check whether an order is eligible for a refund.",
+                "name": "check_refund_policy",
+                "parameters": {
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "days_since_delivery": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "category",
+                    "days_since_delivery"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Create a refund request for an order.",
+                "name": "create_refund_request",
+                "parameters": {
+                  "properties": {
+                    "amount": {
+                      "type": "number"
+                    },
+                    "order_id": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id",
+                    "amount",
+                    "reason"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Search the help-centre articles.",
+                "name": "search_docs",
+                "parameters": {
+                  "properties": {
+                    "query": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "query"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            }
+          ]
+        },
+        "body_encoding": "json",
+        "headers": {
+          "accept": "*/*",
+          "accept-encoding": "identity",
+          "authorization": "[REDACTED]",
+          "connection": "keep-alive",
+          "content-length": "1557",
+          "content-type": "application/json",
+          "host": "127.0.0.1:64943",
+          "user-agent": "python-httpx/0.28.1"
+        },
+        "match_key": "sha256:414946767340afbeb43b40848fca08ff958a16b8e3f02a2267d10662df05ab6a",
+        "method": "POST",
+        "url": "http://127.0.0.1:64943/v1/chat/completions"
+      },
+      "response": {
+        "body": {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "index": 0,
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"order_id\": \"2001\"}",
+                      "name": "get_order"
+                    },
+                    "id": "call_mock_0001_1",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "created": 1760000000,
+          "id": "chatcmpl-mock-0001",
+          "model": "mock-mimo",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 5,
+            "prompt_tokens": 239,
+            "total_tokens": 244
+          }
+        },
+        "body_encoding": "json",
+        "headers": {
+          "content-type": "application/json",
+          "date": "Thu, 15 Oct 2026 09:42:30 GMT",
+          "request-id": "req_mock_0001",
+          "server": "BaseHTTP/0.6 Python/3.12.14",
+          "x-replex-mock": "true"
+        },
+        "status": 200,
+        "stream": null
+      },
+      "type": "exchange"
+    },
+    {
+      "args": {
+        "order_id": "2001"
+      },
+      "duration_ms": 0,
+      "error": null,
+      "index": 1,
+      "lossy": false,
+      "name": "get_order",
+      "result": {
+        "amount": 349.0,
+        "category": "electronics",
+        "currency": "EUR",
+        "customer_email": "[REDACTED_EMAIL_1]",
+        "days_since_delivery": 45,
+        "item": "GPS watch",
+        "order_id": "2001",
+        "status": "delivered"
+      },
+      "type": "tool_call"
+    },
+    {
+      "duration_ms": 0,
+      "index": 2,
+      "request": {
+        "body": {
+          "messages": [
+            {
+              "content": "You are the fast, friendly customer support agent for Acme Outdoor. Customers hate waiting.\nLook up the order with get_order. If you need policy details, use search_docs, then act right away without extra checks.\nReply with a single JSON object and nothing else: {\"decision\": \"refund_requested\" | \"refund_denied\" | \"info\", \"refund_id\": string or null, \"message\": \"<one short paragraph for the customer>\"}.",
+              "role": "system"
+            },
+            {
+              "content": "I want to return order 2001 for a refund, the watch is too big.",
+              "role": "user"
+            },
+            {
+              "content": null,
+              "role": "assistant",
+              "tool_calls": [
+                {
+                  "function": {
+                    "arguments": "{\"order_id\": \"2001\"}",
+                    "name": "get_order"
+                  },
+                  "id": "call_mock_0001_1",
+                  "type": "function"
+                }
+              ]
+            },
+            {
+              "content": "{\"amount\": 349.0, \"category\": \"electronics\", \"currency\": \"EUR\", \"customer_email\": \"[REDACTED_EMAIL_1]\", \"days_since_delivery\": 45, \"item\": \"GPS watch\", \"order_id\": \"2001\", \"status\": \"delivered\"}",
+              "role": "tool",
+              "tool_call_id": "call_mock_0001_1"
+            }
+          ],
+          "model": "mock-mimo",
+          "tools": [
+            {
+              "function": {
+                "description": "Look up an order by its id.",
+                "name": "get_order",
+                "parameters": {
+                  "properties": {
+                    "order_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Check whether an order is eligible for a refund.",
+                "name": "check_refund_policy",
+                "parameters": {
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "days_since_delivery": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "category",
+                    "days_since_delivery"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Create a refund request for an order.",
+                "name": "create_refund_request",
+                "parameters": {
+                  "properties": {
+                    "amount": {
+                      "type": "number"
+                    },
+                    "order_id": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id",
+                    "amount",
+                    "reason"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Search the help-centre articles.",
+                "name": "search_docs",
+                "parameters": {
+                  "properties": {
+                    "query": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "query"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            }
+          ]
+        },
+        "body_encoding": "json",
+        "headers": {
+          "accept": "*/*",
+          "accept-encoding": "identity",
+          "authorization": "[REDACTED]",
+          "connection": "keep-alive",
+          "content-length": "2008",
+          "content-type": "application/json",
+          "host": "127.0.0.1:64943",
+          "user-agent": "python-httpx/0.28.1"
+        },
+        "match_key": "sha256:296369d3622547eadba69aa262120bf4320fe9e65d0892d8920a8c95b2740900",
+        "method": "POST",
+        "url": "http://127.0.0.1:64943/v1/chat/completions"
+      },
+      "response": {
+        "body": {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "index": 0,
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"query\": \"refund window\"}",
+                      "name": "search_docs"
+                    },
+                    "id": "call_mock_0002_1",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "created": 1760000000,
+          "id": "chatcmpl-mock-0002",
+          "model": "mock-mimo",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 7,
+            "prompt_tokens": 357,
+            "total_tokens": 364
+          }
+        },
+        "body_encoding": "json",
+        "headers": {
+          "content-type": "application/json",
+          "date": "Thu, 15 Oct 2026 09:42:30 GMT",
+          "request-id": "req_mock_0002",
+          "server": "BaseHTTP/0.6 Python/3.12.14",
+          "x-replex-mock": "true"
+        },
+        "status": 200,
+        "stream": null
+      },
+      "type": "exchange"
+    },
+    {
+      "args": {
+        "query": "refund window"
+      },
+      "duration_ms": 0,
+      "error": null,
+      "index": 3,
+      "lossy": false,
+      "name": "search_docs",
+      "result": [
+        "Refund window: items can be returned for a full refund within 30 days of delivery.",
+        "Electronics must be unopened to qualify for a refund."
+      ],
+      "type": "tool_call"
+    },
+    {
+      "duration_ms": 0,
+      "index": 4,
+      "request": {
+        "body": {
+          "messages": [
+            {
+              "content": "You are the fast, friendly customer support agent for Acme Outdoor. Customers hate waiting.\nLook up the order with get_order. If you need policy details, use search_docs, then act right away without extra checks.\nReply with a single JSON object and nothing else: {\"decision\": \"refund_requested\" | \"refund_denied\" | \"info\", \"refund_id\": string or null, \"message\": \"<one short paragraph for the customer>\"}.",
+              "role": "system"
+            },
+            {
+              "content": "I want to return order 2001 for a refund, the watch is too big.",
+              "role": "user"
+            },
+            {
+              "content": null,
+              "role": "assistant",
+              "tool_calls": [
+                {
+                  "function": {
+                    "arguments": "{\"order_id\": \"2001\"}",
+                    "name": "get_order"
+                  },
+                  "id": "call_mock_0001_1",
+                  "type": "function"
+                }
+              ]
+            },
+            {
+              "content": "{\"amount\": 349.0, \"category\": \"electronics\", \"currency\": \"EUR\", \"customer_email\": \"[REDACTED_EMAIL_1]\", \"days_since_delivery\": 45, \"item\": \"GPS watch\", \"order_id\": \"2001\", \"status\": \"delivered\"}",
+              "role": "tool",
+              "tool_call_id": "call_mock_0001_1"
+            },
+            {
+              "content": null,
+              "role": "assistant",
+              "tool_calls": [
+                {
+                  "function": {
+                    "arguments": "{\"query\": \"refund window\"}",
+                    "name": "search_docs"
+                  },
+                  "id": "call_mock_0002_1",
+                  "type": "function"
+                }
+              ]
+            },
+            {
+              "content": "[\"Refund window: items can be returned for a full refund within 30 days of delivery.\", \"Electronics must be unopened to qualify for a refund.\"]",
+              "role": "tool",
+              "tool_call_id": "call_mock_0002_1"
+            }
+          ],
+          "model": "mock-mimo",
+          "tools": [
+            {
+              "function": {
+                "description": "Look up an order by its id.",
+                "name": "get_order",
+                "parameters": {
+                  "properties": {
+                    "order_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Check whether an order is eligible for a refund.",
+                "name": "check_refund_policy",
+                "parameters": {
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "days_since_delivery": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "category",
+                    "days_since_delivery"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Create a refund request for an order.",
+                "name": "create_refund_request",
+                "parameters": {
+                  "properties": {
+                    "amount": {
+                      "type": "number"
+                    },
+                    "order_id": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id",
+                    "amount",
+                    "reason"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Search the help-centre articles.",
+                "name": "search_docs",
+                "parameters": {
+                  "properties": {
+                    "query": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "query"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            }
+          ]
+        },
+        "body_encoding": "json",
+        "headers": {
+          "accept": "*/*",
+          "accept-encoding": "identity",
+          "authorization": "[REDACTED]",
+          "connection": "keep-alive",
+          "content-length": "2392",
+          "content-type": "application/json",
+          "host": "127.0.0.1:64943",
+          "user-agent": "python-httpx/0.28.1"
+        },
+        "match_key": "sha256:eda384cfafca46c6dfb08661d03791720a33449f9ade6d39830000120aa01258",
+        "method": "POST",
+        "url": "http://127.0.0.1:64943/v1/chat/completions"
+      },
+      "response": {
+        "body": {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "{\"decision\": \"refund_denied\", \"refund_id\": null, \"message\": \"Sorry! Order 2001 is past our 30-day refund window.\"}",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1760000000,
+          "id": "chatcmpl-mock-0003",
+          "model": "mock-mimo",
+          "object": "chat.completion",
+          "usage": {
+            "completion_tokens": 29,
+            "prompt_tokens": 458,
+            "total_tokens": 487
+          }
+        },
+        "body_encoding": "json",
+        "headers": {
+          "content-type": "application/json",
+          "date": "Thu, 15 Oct 2026 09:42:30 GMT",
+          "request-id": "req_mock_0003",
+          "server": "BaseHTTP/0.6 Python/3.12.14",
+          "x-replex-mock": "true"
+        },
+        "status": 200,
+        "stream": null
+      },
+      "type": "exchange"
+    }
+  ],
+  "meta": {
+    "git_sha": "3e7dbd0",
+    "model": "mock-mimo",
+    "provider": "mock",
+    "tags": []
+  },
+  "name": "refund_ineligible_openai",
+  "replex_version": "0.1.0",
+  "schema_version": 1,
+  "usage": {
+    "input_tokens": 1054,
+    "output_tokens": 41
+  }
+}

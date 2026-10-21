@@ -94,11 +94,11 @@ export function DiffRows({ result, focusStep }: { result: CompareResult; focusSt
 
   if (entries.length === 0) return <EmptyState title="Both runs are empty." />;
   return (
-    <div className="diff" role="table" aria-label="Aligned steps">
-      <div className="diff-row diff-header" role="row">
+    <div className="diff" role="list" aria-label="Aligned steps">
+      <div className="diff-row diff-header" aria-hidden="true">
         <div className="mark" />
-        <div role="columnheader">Before · {result.a.name}</div>
-        <div role="columnheader">After · {result.b.name}</div>
+        <div>Before · {result.a.name}</div>
+        <div>After · {result.b.name}</div>
       </div>
       {entries.map((e, i) => {
         const a = e.a_index === null ? undefined : result.a.steps[e.a_index];
@@ -106,7 +106,7 @@ export function DiffRows({ result, focusStep }: { result: CompareResult; focusSt
         return (
           <div
             key={i}
-            role="row"
+            role="listitem"
             data-nav-index={i}
             className={`diff-row diff-${e.status}${i === active ? " row-active" : ""}`}
           >
@@ -118,9 +118,10 @@ export function DiffRows({ result, focusStep }: { result: CompareResult; focusSt
                 toggle(i);
               }}
               aria-expanded={open.has(i)}
-              aria-label={`${e.status === "same" ? "unchanged" : e.status}: ${e.name}`}
             >
-              <span className="mark" aria-hidden="true" />
+              <span className="mark">
+                <span className="visually-hidden">{e.status === "same" ? "unchanged" : e.status}: </span>
+              </span>
               <Cell step={a} />
               <Cell step={b} />
             </button>

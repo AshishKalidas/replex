@@ -1,0 +1,664 @@
+{
+  "created_at": "2026-10-07T10:15:20Z",
+  "events": [
+    {
+      "duration_ms": 1,
+      "index": 0,
+      "request": {
+        "body": {
+          "messages": [
+            {
+              "content": "You are the customer support agent for Acme Outdoor.\nAlways look up the order with get_order first.\nBefore creating any refund, ALWAYS call check_refund_policy with the order's category and days since delivery, and only call create_refund_request if the order is eligible.\nReply with a single JSON object and nothing else: {\"decision\": \"refund_requested\" | \"refund_denied\" | \"info\", \"refund_id\": string or null, \"message\": \"<one short paragraph for the customer>\"}.",
+              "role": "system"
+            },
+            {
+              "content": "Can you tell me the status of order 1043?",
+              "role": "user"
+            }
+          ],
+          "model": "mock-mimo",
+          "stream": true,
+          "stream_options": {
+            "include_usage": true
+          },
+          "tools": [
+            {
+              "function": {
+                "description": "Look up an order by its id.",
+                "name": "get_order",
+                "parameters": {
+                  "properties": {
+                    "order_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Check whether an order is eligible for a refund.",
+                "name": "check_refund_policy",
+                "parameters": {
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "days_since_delivery": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "category",
+                    "days_since_delivery"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Create a refund request for an order.",
+                "name": "create_refund_request",
+                "parameters": {
+                  "properties": {
+                    "amount": {
+                      "type": "number"
+                    },
+                    "order_id": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id",
+                    "amount",
+                    "reason"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Search the help-centre articles.",
+                "name": "search_docs",
+                "parameters": {
+                  "properties": {
+                    "query": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "query"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            }
+          ]
+        },
+        "body_encoding": "json",
+        "headers": {
+          "accept": "*/*",
+          "accept-encoding": "identity",
+          "authorization": "[REDACTED]",
+          "connection": "keep-alive",
+          "content-length": "1650",
+          "content-type": "application/json",
+          "host": "127.0.0.1:61232",
+          "user-agent": "python-httpx/0.28.1"
+        },
+        "match_key": "sha256:b6bfcec0aa768c0dbfb26995c2ac648854dddd1f1f84fb10294e0dafd8c7c922",
+        "method": "POST",
+        "url": "http://127.0.0.1:61232/v1/chat/completions"
+      },
+      "response": {
+        "body": null,
+        "body_encoding": "json",
+        "headers": {
+          "content-type": "text/event-stream",
+          "date": "Wed, 07 Oct 2026 10:15:20 GMT",
+          "request-id": "req_mock_0001",
+          "server": "BaseHTTP/0.6 Python/3.12.14",
+          "x-replex-mock": "true"
+        },
+        "status": 200,
+        "stream": [
+          {
+            "data": {
+              "choices": [
+                {
+                  "delta": {
+                    "content": "",
+                    "role": "assistant"
+                  },
+                  "finish_reason": null,
+                  "index": 0
+                }
+              ],
+              "created": 1760000000,
+              "id": "chatcmpl-mock-0001",
+              "model": "mock-mimo",
+              "object": "chat.completion.chunk"
+            },
+            "event": null,
+            "id": null
+          },
+          {
+            "data": {
+              "choices": [
+                {
+                  "delta": {
+                    "content": "Let me look "
+                  },
+                  "finish_reason": null,
+                  "index": 0
+                }
+              ],
+              "created": 1760000000,
+              "id": "chatcmpl-mock-0001",
+              "model": "mock-mimo",
+              "object": "chat.completion.chunk"
+            },
+            "event": null,
+            "id": null
+          },
+          {
+            "data": {
+              "choices": [
+                {
+                  "delta": {
+                    "content": "up order 1043."
+                  },
+                  "finish_reason": null,
+                  "index": 0
+                }
+              ],
+              "created": 1760000000,
+              "id": "chatcmpl-mock-0001",
+              "model": "mock-mimo",
+              "object": "chat.completion.chunk"
+            },
+            "event": null,
+            "id": null
+          },
+          {
+            "data": {
+              "choices": [
+                {
+                  "delta": {
+                    "tool_calls": [
+                      {
+                        "function": {
+                          "arguments": "",
+                          "name": "get_order"
+                        },
+                        "id": "call_mock_0001_1",
+                        "index": 0,
+                        "type": "function"
+                      }
+                    ]
+                  },
+                  "finish_reason": null,
+                  "index": 0
+                }
+              ],
+              "created": 1760000000,
+              "id": "chatcmpl-mock-0001",
+              "model": "mock-mimo",
+              "object": "chat.completion.chunk"
+            },
+            "event": null,
+            "id": null
+          },
+          {
+            "data": {
+              "choices": [
+                {
+                  "delta": {
+                    "tool_calls": [
+                      {
+                        "function": {
+                          "arguments": "{\"order_id\":"
+                        },
+                        "index": 0
+                      }
+                    ]
+                  },
+                  "finish_reason": null,
+                  "index": 0
+                }
+              ],
+              "created": 1760000000,
+              "id": "chatcmpl-mock-0001",
+              "model": "mock-mimo",
+              "object": "chat.completion.chunk"
+            },
+            "event": null,
+            "id": null
+          },
+          {
+            "data": {
+              "choices": [
+                {
+                  "delta": {
+                    "tool_calls": [
+                      {
+                        "function": {
+                          "arguments": " \"1043\"}"
+                        },
+                        "index": 0
+                      }
+                    ]
+                  },
+                  "finish_reason": null,
+                  "index": 0
+                }
+              ],
+              "created": 1760000000,
+              "id": "chatcmpl-mock-0001",
+              "model": "mock-mimo",
+              "object": "chat.completion.chunk"
+            },
+            "event": null,
+            "id": null
+          },
+          {
+            "data": {
+              "choices": [
+                {
+                  "delta": {},
+                  "finish_reason": "tool_calls",
+                  "index": 0
+                }
+              ],
+              "created": 1760000000,
+              "id": "chatcmpl-mock-0001",
+              "model": "mock-mimo",
+              "object": "chat.completion.chunk"
+            },
+            "event": null,
+            "id": null
+          },
+          {
+            "data": {
+              "choices": [],
+              "created": 1760000000,
+              "id": "chatcmpl-mock-0001",
+              "model": "mock-mimo",
+              "object": "chat.completion.chunk",
+              "usage": {
+                "completion_tokens": 12,
+                "prompt_tokens": 264,
+                "total_tokens": 276
+              }
+            },
+            "event": null,
+            "id": null
+          },
+          {
+            "data": "[DONE]",
+            "event": null,
+            "id": null
+          }
+        ]
+      },
+      "type": "exchange"
+    },
+    {
+      "args": {
+        "order_id": "1043"
+      },
+      "duration_ms": 0,
+      "error": null,
+      "index": 1,
+      "lossy": false,
+      "name": "get_order",
+      "result": {
+        "amount": 24.5,
+        "category": "accessories",
+        "currency": "EUR",
+        "customer_email": "[REDACTED_EMAIL_1]",
+        "days_since_delivery": null,
+        "item": "Insulated water bottle",
+        "order_id": "1043",
+        "status": "shipped"
+      },
+      "type": "tool_call"
+    },
+    {
+      "duration_ms": 1,
+      "index": 2,
+      "request": {
+        "body": {
+          "messages": [
+            {
+              "content": "You are the customer support agent for Acme Outdoor.\nAlways look up the order with get_order first.\nBefore creating any refund, ALWAYS call check_refund_policy with the order's category and days since delivery, and only call create_refund_request if the order is eligible.\nReply with a single JSON object and nothing else: {\"decision\": \"refund_requested\" | \"refund_denied\" | \"info\", \"refund_id\": string or null, \"message\": \"<one short paragraph for the customer>\"}.",
+              "role": "system"
+            },
+            {
+              "content": "Can you tell me the status of order 1043?",
+              "role": "user"
+            },
+            {
+              "content": "Let me look up order 1043.",
+              "role": "assistant",
+              "tool_calls": [
+                {
+                  "function": {
+                    "arguments": "{\"order_id\": \"1043\"}",
+                    "name": "get_order"
+                  },
+                  "id": "call_mock_0001_1",
+                  "type": "function"
+                }
+              ]
+            },
+            {
+              "content": "{\"order_id\": \"1043\", \"customer_email\": \"[REDACTED_EMAIL_1]\", \"item\": \"Insulated water bottle\", \"category\": \"accessories\", \"amount\": 24.5, \"currency\": \"EUR\", \"status\": \"shipped\", \"days_since_delivery\": null}",
+              "role": "tool",
+              "tool_call_id": "call_mock_0001_1"
+            }
+          ],
+          "model": "mock-mimo",
+          "stream": true,
+          "stream_options": {
+            "include_usage": true
+          },
+          "tools": [
+            {
+              "function": {
+                "description": "Look up an order by its id.",
+                "name": "get_order",
+                "parameters": {
+                  "properties": {
+                    "order_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Check whether an order is eligible for a refund.",
+                "name": "check_refund_policy",
+                "parameters": {
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "days_since_delivery": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "category",
+                    "days_since_delivery"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Create a refund request for an order.",
+                "name": "create_refund_request",
+                "parameters": {
+                  "properties": {
+                    "amount": {
+                      "type": "number"
+                    },
+                    "order_id": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "order_id",
+                    "amount",
+                    "reason"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            },
+            {
+              "function": {
+                "description": "Search the help-centre articles.",
+                "name": "search_docs",
+                "parameters": {
+                  "properties": {
+                    "query": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "query"
+                  ],
+                  "type": "object"
+                }
+              },
+              "type": "function"
+            }
+          ]
+        },
+        "body_encoding": "json",
+        "headers": {
+          "accept": "*/*",
+          "accept-encoding": "identity",
+          "authorization": "[REDACTED]",
+          "connection": "keep-alive",
+          "content-length": "2138",
+          "content-type": "application/json",
+          "host": "127.0.0.1:61232",
+          "user-agent": "python-httpx/0.28.1"
+        },
+        "match_key": "sha256:be13114533c25b85e78d9c8603242973ed85f397af392e519cca02cf1cf9b924",
+        "method": "POST",
+        "url": "http://127.0.0.1:61232/v1/chat/completions"
+      },
+      "response": {
+        "body": null,
+        "body_encoding": "json",
+        "headers": {
+          "content-type": "text/event-stream",
+          "date": "Wed, 07 Oct 2026 10:15:20 GMT",
+          "request-id": "req_mock_0002",
+          "server": "BaseHTTP/0.6 Python/3.12.14",
+          "x-replex-mock": "true"
+        },
+        "status": 200,
+        "stream": [
+          {
+            "data": {
+              "choices": [
+                {
+                  "delta": {
+                    "content": "",
+                    "role": "assistant"
+                  },
+                  "finish_reason": null,
+                  "index": 0
+                }
+              ],
+              "created": 1760000000,
+              "id": "chatcmpl-mock-0002",
+              "model": "mock-mimo",
+              "object": "chat.completion.chunk"
+            },
+            "event": null,
+            "id": null
+          },
+          {
+            "data": {
+              "choices": [
+                {
+                  "delta": {
+                    "content": "{\"decision\": \"info\", \"refund_id\": "
+                  },
+                  "finish_reason": null,
+                  "index": 0
+                }
+              ],
+              "created": 1760000000,
+              "id": "chatcmpl-mock-0002",
+              "model": "mock-mimo",
+              "object": "chat.completion.chunk"
+            },
+            "event": null,
+            "id": null
+          },
+          {
+            "data": {
+              "choices": [
+                {
+                  "delta": {
+                    "content": "null, \"message\": \"Your "
+                  },
+                  "finish_reason": null,
+                  "index": 0
+                }
+              ],
+              "created": 1760000000,
+              "id": "chatcmpl-mock-0002",
+              "model": "mock-mimo",
+              "object": "chat.completion.chunk"
+            },
+            "event": null,
+            "id": null
+          },
+          {
+            "data": {
+              "choices": [
+                {
+                  "delta": {
+                    "content": "order 1043 (Insulated "
+                  },
+                  "finish_reason": null,
+                  "index": 0
+                }
+              ],
+              "created": 1760000000,
+              "id": "chatcmpl-mock-0002",
+              "model": "mock-mimo",
+              "object": "chat.completion.chunk"
+            },
+            "event": null,
+            "id": null
+          },
+          {
+            "data": {
+              "choices": [
+                {
+                  "delta": {
+                    "content": "water bottle) is "
+                  },
+                  "finish_reason": null,
+                  "index": 0
+                }
+              ],
+              "created": 1760000000,
+              "id": "chatcmpl-mock-0002",
+              "model": "mock-mimo",
+              "object": "chat.completion.chunk"
+            },
+            "event": null,
+            "id": null
+          },
+          {
+            "data": {
+              "choices": [
+                {
+                  "delta": {
+                    "content": "currently shipped.\"}"
+                  },
+                  "finish_reason": null,
+                  "index": 0
+                }
+              ],
+              "created": 1760000000,
+              "id": "chatcmpl-mock-0002",
+              "model": "mock-mimo",
+              "object": "chat.completion.chunk"
+            },
+            "event": null,
+            "id": null
+          },
+          {
+            "data": {
+              "choices": [
+                {
+                  "delta": {},
+                  "finish_reason": "stop",
+                  "index": 0
+                }
+              ],
+              "created": 1760000000,
+              "id": "chatcmpl-mock-0002",
+              "model": "mock-mimo",
+              "object": "chat.completion.chunk"
+            },
+            "event": null,
+            "id": null
+          },
+          {
+            "data": {
+              "choices": [],
+              "created": 1760000000,
+              "id": "chatcmpl-mock-0002",
+              "model": "mock-mimo",
+              "object": "chat.completion.chunk",
+              "usage": {
+                "completion_tokens": 29,
+                "prompt_tokens": 391,
+                "total_tokens": 420
+              }
+            },
+            "event": null,
+            "id": null
+          },
+          {
+            "data": "[DONE]",
+            "event": null,
+            "id": null
+          }
+        ]
+      },
+      "type": "exchange"
+    }
+  ],
+  "meta": {
+    "git_sha": "8f1425b",
+    "model": "mock-mimo",
+    "provider": "mock",
+    "tags": []
+  },
+  "name": "order_status_openai_stream",
+  "replex_version": "0.1.0",
+  "schema_version": 1,
+  "usage": {
+    "input_tokens": 655,
+    "output_tokens": 41
+  }
+}

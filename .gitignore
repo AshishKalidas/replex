@@ -27,6 +27,8 @@ replex-report.md
 # Node
 console-ui/node_modules/
 console-ui/dist/
+console-ui/test-results/
+console-ui/playwright-report/
 
 # Secrets
 .env

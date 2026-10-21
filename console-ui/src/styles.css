@@ -75,6 +75,18 @@ h2 { font-size: 24px; line-height: 1.17; letter-spacing: 0.009em; }
 .quiet { color: var(--text-2); }
 .text-fail { color: var(--fail); font-size: 13px; margin-top: 4px; }
 .note { color: var(--text-2); font-size: 14px; margin-top: 16px; }
+/* Read by screen readers, not shown. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
 
 /* ------------------------------------------------------------------ chrome */
 

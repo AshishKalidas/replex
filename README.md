@@ -215,7 +215,10 @@ make build          # sdist and wheel in dist/, console included
 ```
 
 The console's front end lives in `console-ui/` (React and TypeScript); `make build-console`
-rebuilds the copy that ships inside the package.
+rebuilds the copy that ships inside the package. `make e2e` drives the built console in
+Chromium with Playwright: each test runs a real `replex console` over a temporary copy of the
+cassettes in `console-ui/e2e/fixtures/`, then reviews, accepts and rejects changes the way a
+person would.
 
 ## Prior art
 
