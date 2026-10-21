@@ -60,6 +60,24 @@ That opens two bundled workspaces, switched from the top bar:
 From a clone of this repository, `make demo` runs the whole loop for real, offline: it replays
 the example's recordings, changes the prompt, catches the drift and writes an HTML report.
 
+This is what the failing check prints in your terminal (and in CI) after the prompt edit:
+
+```text
+RepleX drift check failed for 'refund_request':
+  [tool_sequence] tool sequence changed (exact):
+      ['get_order', 'check_refund_policy', 'create_refund_request']
+   -> ['get_order', 'search_docs', 'create_refund_request']
+  [new_tools] candidate calls tool(s) absent from the baseline: ['search_docs']
+  approve it with: replex approve refund_request
+```
+
+The refund still goes through and the answer still reads well, but the agent no longer checks
+the refund policy. On a pull request, the GitHub Action posts the same review as a comment
+and updates it in place on every push.
+
+If an agent starts doing something with side effects that its recording never did, RepleX
+does not run it. The check fails with `blocked_tool` and tells you which call it stopped.
+
 ## What it does
 
 - **Records and replays agents.** Model calls through `httpx`, `httpx2`, `requests` and

@@ -135,6 +135,21 @@ forbidden_tools: {patterns: ["delete_*", "send_payment"], severity: fail}
   fail  forbidden_tools: forbidden tool 'delete_order' was called (matches 'delete_*')
   ```
 
+### `blocked_tool`
+
+Not a policy check, so it has no setting and always fails. During a drift run, a tool that is
+not marked `safe=True` only runs if the recording has a matching call. When the agent calls
+one the recording never did (a refund, an email, a booking), RepleX does not run it, stops the
+run there and reports:
+
+```text
+fail  blocked_tool: the agent called 'book_meeting', which is not marked safe and has no matching call in the recording, so RepleX did not run it and the run stopped there
+```
+
+The stopped run is kept as a candidate so you can look at it, but it cannot be approved,
+because it is not a whole run. Fix the change, or record the scenario again on purpose with
+`--replex-mode=rewrite`.
+
 ### `final_output`
 
 The final answer. Default `{mode: similarity, threshold: 0.8, severity: warn}`.

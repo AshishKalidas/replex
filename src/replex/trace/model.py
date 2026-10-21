@@ -165,6 +165,10 @@ class Trace(_Model):
         """Assert no tool whose name matches the glob ``pattern`` was called."""
         assertions.assert_no_tool(self, pattern)
 
+    def assert_not_called(self, pattern: str) -> None:
+        """Alias of :meth:`assert_no_tool`, for those who reach for the mock-style name."""
+        assertions.assert_no_tool(self, pattern)
+
     def assert_max_steps(self, n: int) -> None:
         """Assert the run took at most ``n`` steps."""
         assertions.assert_max_steps(self, n)

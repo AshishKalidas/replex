@@ -78,6 +78,12 @@ def test_assert_called_uses_model_requests_without_tool_steps() -> None:
     t.assert_called("get_order", times=2)
 
 
+def test_assert_not_called_is_assert_no_tool() -> None:
+    T.assert_not_called("delete_*")
+    with pytest.raises(AssertionError, match="expected no tool matching"):
+        T.assert_not_called("create_*")
+
+
 def test_assert_no_tool() -> None:
     T.assert_no_tool("delete_*")
     with pytest.raises(
