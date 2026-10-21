@@ -448,6 +448,80 @@ def redact_cmd(directory: Path, check: bool, as_json: bool) -> None:
         sys.exit(1)
 
 
+# --------------------------------------------------------------------------- consistency
+
+
+@cli.command("consistency")
+@click.argument("names", nargs=-1)
+@click.option(
+    "--candidates",
+    "candidate_dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    help="candidate directory holding runs/<name>/ (default: the configured candidate_dir)",
+)
+@click.option(
+    "--baselines",
+    "baseline_dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    help="baseline directory (default: the configured cassette_dir)",
+)
+@click.option(
+    "--by-field",
+    "field",
+    metavar="FIELD",
+    help="also split paths by this field of a JSON final answer (e.g. decision)",
+)
+@click.option("--json", "as_json", is_flag=True, help="print the reports as JSON")
+@click.option("--markdown", "as_markdown", is_flag=True, help="print the reports as Markdown")
+@_errors
+def consistency_cmd(
+    names: tuple[str, ...],
+    candidate_dir: Path | None,
+    baseline_dir: Path | None,
+    field: str | None,
+    as_json: bool,
+    as_markdown: bool,
+) -> None:
+    """How consistently repeated runs behave (pytest --replex-mode=drift --replex-repeat=N).
+
+    Groups the runs of each scenario by the tools called, in order, and shows how many runs
+    took each path and whether the recorded run's path is what most runs do. NAMES default to
+    every scenario with repeated runs.
+    """
+    from replex.consistency import analyse_runs, json_field, scenarios_with_runs
+    from replex.consistency.render import consistency_markdown, render_consistency
+
+    cfg = _config()
+    candidates = candidate_dir or cfg.candidate_path
+    categorise = json_field(field) if field else None
+    reports = []
+    for name in names or scenarios_with_runs(candidates):
+        report = analyse_runs(
+            candidates,
+            name,
+            baseline_dir=baseline_dir or cfg.cassette_path,
+            categorise=categorise,
+        )
+        if report is None:
+            raise click.BadParameter(f"no repeated runs of {name!r} in {candidates}")
+        reports.append(report)
+    if as_json:
+        _emit_json([r.to_dict() for r in reports])
+    elif as_markdown:
+        click.echo(consistency_markdown(reports), nl=False)
+    elif not reports:
+        click.echo(
+            f"no repeated runs in {candidates}; record some with "
+            f"pytest --replex-mode=drift --replex-repeat=5"
+        )
+    else:
+        console = _console()
+        for i, report in enumerate(reports):
+            if i:
+                console.print()
+            render_consistency(report, console)
+
+
 # --------------------------------------------------------------------------- approve
 
 

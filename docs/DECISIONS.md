@@ -49,6 +49,7 @@ Design choices worth knowing about, one line each: decision, reason.
 - **`replex run` reuses sessions, trace assertions and the drift policy; a suite file only names the agent, inputs and expectations.** Suites and pytest tests then behave the same and share cassettes.
 - **In a suite, failed expectations are the run's error only in `record` and `rewrite`; drift still compares.** A failing run must never replace a baseline, but a drift review should see both kinds of problem at once.
 - **`replex run` loads configuration from the project above the suite file, not the working directory.** The same command gives the same result from anywhere.
+- **Repeated runs (`--replex-repeat`) are stored under `<candidate_dir>/runs/<name>/` and are not judged by the policy one by one.** They measure how often each path occurs; failing on every minority path would make a noisy agent's suite unusable, and they must never replace the candidate that review and approval act on.
 - **`replex report` exits 0 unless `--fail-on-drift` is given.** It is usually a reporting step after the tests already decided pass or fail.
 - **The GitHub Action comments only on `pull_request` events from the same repository, never via `pull_request_target`.** A fork's code must never run with a writable token or a secret.
 - **The action keeps one comment per project, found by a hidden marker naming its working directory, and edits it in place.** Re-runs should not bury a pull request in comments.

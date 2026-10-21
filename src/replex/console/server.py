@@ -32,6 +32,7 @@ from replex.cassette.storage import (
     sanitise_name,
 )
 from replex.config import check_ci_guard
+from replex.consistency import analyse_runs, list_runs
 from replex.drift.compare import DriftReport, compare
 from replex.drift.policy import Policy, load_policy
 from replex.errors import RecordingRefused, ReplexError
@@ -54,6 +55,15 @@ def _mtime(path: Path | None) -> float | None:
     return path.stat().st_mtime if path is not None and path.is_file() else None
 
 
+def _check_name(name: str) -> None:
+    try:
+        valid = bool(name) and sanitise_name(name) == name
+    except ReplexError:
+        valid = False
+    if not valid:
+        raise HTTPException(400, "invalid cassette name")
+
+
 @dataclass
 class _Store:
     baseline_dir: Path
@@ -71,12 +81,7 @@ class _Store:
         raise HTTPException(404, f"unknown run kind {kind!r}")
 
     def path(self, kind: str, name: str) -> Path:
-        try:
-            valid = bool(name) and sanitise_name(name) == name
-        except ReplexError:
-            valid = False
-        if not valid:
-            raise HTTPException(400, "invalid cassette name")
+        _check_name(name)
         p = cassette_path(self.directory(kind), name)
         if not p.is_file():
             raise HTTPException(404, f"no {kind} cassette named {name!r}")
@@ -131,6 +136,23 @@ class _Store:
             ),
         )
         return report
+
+    def consistency(self, name: str) -> dict[str, Any] | None:
+        """The consistency report of a scenario's repeated runs, or ``None`` without runs."""
+        _check_name(name)
+        runs = list_runs(self.candidate_dir, name)
+        base = cassette_path(self.baseline_dir, name)
+        stamp = (tuple((p.name, _mtime(p)) for p in runs), _mtime(base))
+
+        def build() -> dict[str, Any] | None:
+            try:
+                report = analyse_runs(self.candidate_dir, name, baseline_dir=self.baseline_dir)
+            except ReplexError as exc:
+                raise HTTPException(422, str(exc)) from exc
+            return None if report is None else report.to_dict()
+
+        result: dict[str, Any] | None = self._cached(f"consistency:{name}", stamp, build)
+        return result
 
 
 def _summary(store: _Store, kind: str, path: Path) -> dict[str, Any]:
@@ -368,6 +390,11 @@ def create_app(
             "baseline": store.trace("baseline", name).model_dump(mode="json"),
             "candidate": store.trace("candidate", name).model_dump(mode="json"),
         }
+
+    @app.get("/api/w/{ws}/consistency/{name}")
+    def consistency(ws: str, name: str) -> dict[str, Any]:
+        store = store_for(ws)
+        return {"name": name, "report": store.consistency(name)}
 
     @app.post("/api/w/{ws}/scenarios/{name}/accept")
     def accept(ws: str, name: str, request: Request) -> dict[str, Any]:

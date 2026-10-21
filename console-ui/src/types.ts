@@ -159,3 +159,34 @@ export interface ReportPayload {
   generated_at: string;
   pairs: { name: string; report: DriftReport; baseline: Trace | null; candidate: Trace | null }[];
 }
+
+export interface Spread {
+  min: number;
+  median: number;
+  max: number;
+}
+
+export interface PathVariant {
+  tools: string[];
+  category: string | null;
+  runs: string[];
+  share: number;
+  matches_baseline: boolean;
+}
+
+/** Repeated runs of one scenario grouped by path (replex.consistency). */
+export interface ConsistencyReport {
+  name: string;
+  runs: number;
+  distinct_paths: number;
+  variants: PathVariant[];
+  most_common: string[];
+  baseline_tools: string[] | null;
+  baseline_category: string | null;
+  baseline_share: number | null;
+  baseline_is_majority: boolean | null;
+  tokens: Spread;
+  latency_ms: Spread;
+  steps: Spread;
+  categorised: boolean;
+}

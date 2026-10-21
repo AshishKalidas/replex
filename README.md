@@ -196,6 +196,7 @@ More in [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 | [pytest](docs/PYTEST.md) | The marker, fixture, options and configuration |
 | [Suites](docs/SUITES.md) | Scenarios in one YAML file, run with `replex run` instead of pytest |
 | [Drift](docs/DRIFT.md) | Every policy check, the console and approving changes |
+| [Consistency](docs/CONSISTENCY.md) | Run a scenario several times and see how often the agent takes each path |
 | [Redaction](docs/REDACTION.md) | Default rules, custom patterns and the check command |
 | [Cost](docs/COST.md) | Prices, the cost of each run and the cost drift check |
 | [Providers](docs/PROVIDERS.md) | Supported APIs, the mock provider and adding your own |

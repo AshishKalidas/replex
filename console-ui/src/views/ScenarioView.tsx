@@ -14,6 +14,7 @@ function lowerFirst(text: string): string {
   return text ? text[0]!.toLowerCase() + text.slice(1) : text;
 }
 import { DiffRows } from "./CompareView";
+import { Consistency } from "./Consistency";
 
 type Loaded = { kind: "pair"; drift: DriftResult } | { kind: "single"; trace: Trace } | { kind: "missing" };
 
@@ -324,6 +325,7 @@ export function ScenarioView({ source, name }: { source: DataSource; name: strin
           After your next change to the prompt, model or code, run <code>pytest --replex-mode=drift</code> and this
           page will show whether the agent still does the same thing.
         </p>
+        <Consistency source={source} name={name} />
       </section>
     );
   }
@@ -382,6 +384,8 @@ export function ScenarioView({ source, name }: { source: DataSource; name: strin
           </ul>
         </>
       )}
+
+      <Consistency source={source} name={name} />
 
       <div className="details-divider">
         <h2>The details</h2>

@@ -50,6 +50,7 @@ tests can carry a different cassette per case with `pytest.param(..., marks=pyte
 | `--replex-policy=FILE` | Drift policy file |
 | `--replex-overwrite` | Let `record` replace existing cassettes |
 | `--replex-report=PATH` | After a drift run, write a report for the drifted cassettes; `.html` (single file), `.md` or `.json` by suffix |
+| `--replex-repeat=N` | Drift mode only: run each RepleX test N times and report how consistent it is ([CONSISTENCY.md](CONSISTENCY.md)) |
 
 ## What each mode does in a test run
 

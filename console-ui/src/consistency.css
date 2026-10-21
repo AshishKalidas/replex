@@ -1,0 +1,19 @@
+/* Consistency across repeated runs: one row per path, most common first. */
+
+.consistency-lede { margin-top: 12px; color: var(--text); font-size: 19px; line-height: 1.42; letter-spacing: -0.012em; max-width: 720px; }
+.consistency-paths { list-style: none; margin: 32px 0 0; padding: 0; display: flex; flex-direction: column; gap: 28px; }
+.consistency-path { display: grid; grid-template-columns: 180px 1fr; gap: 6px 24px; align-items: center; }
+.consistency-share { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.consistency-count { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.consistency-tag { font-size: 12px; font-weight: 500; padding: 1px 8px; border-radius: 980px; background: var(--band); color: var(--text-2); }
+.consistency-bar { height: 6px; border-radius: 3px; background: var(--band); overflow: hidden; }
+.consistency-bar span { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.consistency-steps { grid-column: 2; color: var(--text); font-size: 15px; }
+.consistency-numbers { display: flex; flex-wrap: wrap; gap: 16px 48px; margin: 40px 0 0; padding-top: 24px; border-top: 1px solid var(--hairline-soft); }
+.consistency-numbers dt { color: var(--text-2); font-size: 13px; }
+.consistency-numbers dd { margin: 2px 0 0; font-size: 15px; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 640px) {
+  .consistency-path { grid-template-columns: 1fr; }
+  .consistency-steps { grid-column: 1; }
+}

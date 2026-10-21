@@ -1,6 +1,7 @@
 import { formatDate } from "./format";
 import type {
   CompareResult,
+  ConsistencyReport,
   DriftResult,
   ReportPayload,
   RunSummary,
@@ -17,6 +18,8 @@ export interface DataSource {
   run(id: string): Promise<Trace>;
   compare(a: string, b: string): Promise<CompareResult>;
   drift(name: string): Promise<DriftResult>;
+  /** Repeated runs of a scenario grouped by path, or null when it was not run repeatedly. */
+  consistency(name: string): Promise<ConsistencyReport | null>;
   /** Whether two runs can be compared (a static report only holds its baseline/candidate pairs). */
   comparable(a: string, b: string): boolean;
   /** Whether this source can accept or discard candidates (only your project, never a report). */
@@ -69,6 +72,7 @@ export function staticSource(payload: ReportPayload): DataSource {
     label: `Report from ${formatDate(payload.generated_at)} UTC`,
     workspace: null,
     writable: false,
+    consistency: () => Promise.resolve(null),
     accept: () => missing("accepting changes"),
     discard: () => missing("discarding changes"),
     async runs() {
@@ -152,6 +156,10 @@ export function serverSource(workspace: WorkspaceInfo, base = ""): DataSource {
     },
     drift(name) {
       return getJson<DriftResult>(`${api}/drift/${encodeURIComponent(name)}`);
+    },
+    async consistency(name) {
+      const data = await getJson<{ report: ConsistencyReport | null }>(`${api}/consistency/${encodeURIComponent(name)}`);
+      return data.report;
     },
     writable: workspace.writable,
     async accept(name) {

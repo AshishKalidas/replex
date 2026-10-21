@@ -18,13 +18,16 @@ from replex.capture.matching import BodyNormaliser
 from replex.cassette.model import Cassette, CassetteMeta, CassetteUsage, Event
 from replex.cassette.storage import cassette_path, load, save
 from replex.config import MODES, Config, check_ci_guard, load_config
+from replex.consistency.runs import run_path
 from replex.errors import CassetteExists, CassetteNotFound, ConfigError, NoActiveSession
 from replex.pricing import Pricing
 from replex.providers import build_trace, detect_provider
 from replex.redaction import RedactionRules, Redactor
 from replex.trace.model import Trace
 
-Outcome = Literal["replayed", "recorded", "drift_passed", "drift_failed", "live", "error"]
+Outcome = Literal[
+    "replayed", "recorded", "drift_passed", "drift_failed", "sampled", "live", "error"
+]
 
 
 def _now() -> str:
@@ -75,6 +78,7 @@ class Session:
         passthrough_hosts: Sequence[str] | None = None,
         strict_unused: bool | None = None,
         tags: Sequence[str] = (),
+        run_number: int | None = None,
     ) -> None:
         base = config if config is not None else load_config()
         if mode is not None and mode not in MODES:
@@ -90,7 +94,13 @@ class Session:
             passthrough_hosts=list(passthrough_hosts) if passthrough_hosts is not None else None,
             strict_unused=strict_unused,
         )
+        if run_number is not None and (self.config.mode != "drift" or run_number < 1):
+            raise ConfigError(
+                f"run_number={run_number!r} needs mode='drift' and a number from 1 "
+                f"(it numbers one of several repeated drift runs)"
+            )
         self.name = name
+        self.run_number = run_number
         self.overwrite = overwrite
         self.patch_httpx = patch_httpx
         self.normalisers = list(normalisers)
@@ -119,7 +129,9 @@ class Session:
 
     @property
     def candidate_path(self) -> Path:
-        """Where a drift run writes its candidate."""
+        """Where a drift run writes its candidate (a numbered run file when repeating)."""
+        if self.run_number is not None:
+            return run_path(self.config.candidate_path, self.name, self.run_number)
         return cassette_path(self.config.candidate_path, self.name)
 
     @property
@@ -216,6 +228,10 @@ class Session:
             from replex.drift.policy import Policy, load_policy
 
             self.written_path = save(cassette, self.candidate_path)
+            if self.run_number is not None and exc is None:
+                # One of several repeated runs: they are measured together, not judged alone.
+                self.outcome = "sampled"
+                return
             if exc is not None:
                 # A crashed run is not a behavioural comparison; keep the candidate to debug.
                 self.outcome = "error"
@@ -332,7 +348,9 @@ def session(name: str, mode: str | None = None, **options: Any) -> Session:
             the configured mode (``[tool.replex]``, then ``REPLEX_MODE``).
         **options: Any of ``cassette_dir``, ``candidate_dir``, ``match``, ``tools``, ``policy``,
             ``overwrite``, ``patch_httpx``, ``normalisers``, ``intercept_hosts``,
-            ``passthrough_hosts``, ``strict_unused``, ``tags`` or a ready ``config``.
+            ``passthrough_hosts``, ``strict_unused``, ``tags``, ``run_number`` or a ready
+            ``config``. In drift mode, ``run_number=n`` writes run ``n`` of a repeated run
+            (see ``replex.consistency``) instead of the candidate, and skips the comparison.
 
     Example::
 
