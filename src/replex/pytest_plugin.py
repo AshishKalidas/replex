@@ -135,11 +135,9 @@ def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:
         report = session.drift_report
         item.add_report_section("call", "replex drift", report.to_markdown())
         if not report.passed:
-            lines = [f"RepleX drift check failed for {session.name!r}:"]
-            lines += [f"  [{f.check}] {f.message}" for f in report.failures]
-            lines.append(f"  candidate: {session.written_path}")
-            lines.append(f"  approve it with: replex approve {session.name}")
-            raise DriftDetected("\n".join(lines))
+            from replex.drift.output import drift_failure_message
+
+            raise DriftDetected(drift_failure_message(session.name, report, session.written_path))
     return result
 
 
@@ -193,34 +191,11 @@ class _Summary:
         )
         path = self.config.getoption("--replex-report")
         if path and self.drift_names:
-            written = _write_report(_replex_config(self.config), self.drift_names, Path(path))
+            from replex.drift.output import write_drift_report
+
+            written = write_drift_report(_replex_config(self.config), self.drift_names, Path(path))
             terminalreporter.write_line(f"drift report: {written}")
 
     def pytest_sessionfinish(self, session: pytest.Session) -> None:
         # Worker processes (xdist) report through user_properties; nothing to do here.
         return None
-
-
-def _write_report(config: Config, names: list[str], path: Path) -> Path:
-    from replex.cassette.storage import atomic_write_text, cassette_path
-    from replex.drift.compare import compare
-    from replex.drift.policy import Policy, load_policy
-    from replex.drift.report import html_report, reports_markdown
-    from replex.pricing import Pricing
-
-    policy = load_policy(config.policy_path) if config.policy_path.is_file() else Policy()
-    pricing = Pricing.from_config(config)
-    reports = []
-    for name in sorted(set(names)):
-        base = cassette_path(config.cassette_path, name)
-        cand = cassette_path(config.candidate_path, name)
-        if base.is_file() and cand.is_file():
-            reports.append(compare(base, cand, policy, name=name, pricing=pricing))
-    suffix = path.suffix.lower()
-    if suffix == ".md":
-        text = reports_markdown(reports)
-    elif suffix == ".json":
-        text = json.dumps([r.to_dict() for r in reports], indent=2, sort_keys=True) + "\n"
-    else:
-        text = html_report(reports)
-    return atomic_write_text(path, text).resolve()

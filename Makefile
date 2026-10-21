@@ -6,7 +6,7 @@ LIVE_SONNET := $(EXAMPLE)/cassettes/live/openrouter-claude-sonnet-5.5
 AGAINST ?= openrouter-claude-sonnet-5.5
 PYTHON_VERSIONS := 3.10 3.11 3.12 3.13
 
-.PHONY: help install test test-fast lint format typecheck build-console test-console e2e build demo \
+.PHONY: help install test test-fast lint format typecheck build-console test-console e2e build demo suite \
         record-claude record-mimo record-openrouter drift-openrouter sample sample-models \
         redact-check bench docker-build docker-test docker-matrix \
         docker-demo docker-console clean
@@ -50,6 +50,9 @@ build: ## Build sdist and wheel into dist/
 
 demo: ## Replay the example, run a drift check between prompt versions, write the HTML report
 	cd $(EXAMPLE) && $(PY) demo.py
+
+suite: ## Replay the example's scenarios from its suite file with `replex run` (offline)
+	cd $(EXAMPLE) && $(PY) -m replex.cli run
 
 sample: ## Rebuild the console's bundled sample workspace from the example (offline)
 	cd $(EXAMPLE) && $(PY) demo.py > /dev/null

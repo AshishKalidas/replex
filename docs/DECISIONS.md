@@ -46,6 +46,9 @@ Design choices worth knowing about, one line each: decision, reason.
 - **Judge calls use the capture layer directly, not a session, so recording a judgement is not refused in CI.** A judgement is a cache of a verdict, not a baseline; a nightly drift job must be able to judge new answers.
 - **A judge reply is validated strictly, and only valid verdicts are stored.** A malformed reply or HTTP error becomes a finding with the check's severity and is retried next time, never a silent pass or a cached failure.
 - **An equivalent verdict is an `info` finding carrying the judge's reason.** Reviewers can see why a reworded answer passed.
+- **`replex run` reuses sessions, trace assertions and the drift policy; a suite file only names the agent, inputs and expectations.** Suites and pytest tests then behave the same and share cassettes.
+- **In a suite, failed expectations are the run's error only in `record` and `rewrite`; drift still compares.** A failing run must never replace a baseline, but a drift review should see both kinds of problem at once.
+- **`replex run` loads configuration from the project above the suite file, not the working directory.** The same command gives the same result from anywhere.
 - **`replex report` exits 0 unless `--fail-on-drift` is given.** It is usually a reporting step after the tests already decided pass or fail.
 - **The GitHub Action comments only on `pull_request` events from the same repository, never via `pull_request_target`.** A fork's code must never run with a writable token or a secret.
 - **The action keeps one comment per project, found by a hidden marker naming its working directory, and edits it in place.** Re-runs should not bury a pull request in comments.

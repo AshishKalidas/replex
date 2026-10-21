@@ -1,0 +1,44 @@
+# The support agent's scenarios for `replex run`. They replay the same cassettes as
+# tests/test_support_agent.py: run `replex run` here, or `make suite` from the repository root.
+#
+# Like the pytest suite, the expectations are invariants. The exact behaviour (which tools, in
+# which order, with which arguments) is pinned by the cassettes and checked in drift mode by
+# replex.policy.yaml.
+version: 1
+agent: support_agent.suite:answer
+
+# Every scenario: no destructive tools, a bounded run, and a well-formed decision.
+expect:
+  no_tools: ["delete_*"]
+  max_steps: 10
+  final_output: {json_schema: schemas/refund.json}
+
+scenarios:
+  - name: refund_request
+    input: >-
+      Hi, I'd like a refund for order 1042 please, the shoes don't fit.
+      My ticket is TCK-482910, you can reach me at jane.doe@example.com.
+    expect:
+      tools: {sequence: [get_order, create_refund_request], mode: subsequence}
+      final_output: {json_schema: schemas/refund.json, contains: '"decision": "refund_requested"'}
+
+  - name: order_status_stream
+    input: Where is my order 1043?
+    kwargs: {stream: true}
+    expect:
+      tools: [get_order]
+      final_output: {json_schema: schemas/refund.json, contains: '"decision": "info"'}
+
+  - name: refund_ineligible_openai
+    input: I want to return order 2001 for a refund, the watch is too big.
+    kwargs: {provider: openai}
+    expect:
+      no_tools: ["delete_*", create_refund_request]
+      final_output: {json_schema: schemas/refund.json, contains: '"decision": "refund_denied"'}
+
+  - name: order_status_openai_stream
+    input: Can you tell me the status of order 1043?
+    kwargs: {provider: openai, stream: true}
+    expect:
+      tools: [get_order]
+      final_output: {json_schema: schemas/refund.json, contains: '"decision": "info"'}

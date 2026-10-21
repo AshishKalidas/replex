@@ -240,6 +240,63 @@ def drift_cmd(
         sys.exit(1)
 
 
+# --------------------------------------------------------------------------- run
+
+
+@cli.command("run")
+@click.argument("suite_file", default="replex.suite.yaml", type=click.Path(dir_okay=False))
+@click.option(
+    "--mode",
+    type=click.Choice(["replay", "record", "drift", "rewrite"]),
+    help="default: the configured mode (REPLEX_MODE, then [tool.replex])",
+)
+@click.option("--only", multiple=True, metavar="NAME", help="run only this scenario (repeatable)")
+@click.option("--overwrite", is_flag=True, help="let record mode replace existing cassettes")
+@click.option(
+    "--report",
+    "report_out",
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="after a drift run, write a report (.html, .md or .json by suffix)",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@_errors
+def run_cmd(
+    suite_file: str,
+    mode: str | None,
+    only: tuple[str, ...],
+    overwrite: bool,
+    report_out: Path | None,
+    as_json: bool,
+) -> None:
+    """Run the scenarios in SUITE_FILE (default replex.suite.yaml). Exit code 1 on failures."""
+    from replex.drift.output import write_drift_report
+    from replex.suite import load_suite, run_suite, suite_config
+    from replex.suite.render import render_results
+
+    suite = load_suite(suite_file)
+    cfg = suite_config(suite, mode)
+    results = run_suite(suite, cfg, only=only, overwrite=overwrite)
+    drifted = [r.name for r in results if r.drift_report is not None]
+    written = write_drift_report(cfg, drifted, report_out) if report_out and drifted else None
+    if as_json:
+        _emit_json(
+            {
+                "suite": str(suite.path),
+                "mode": cfg.mode,
+                "passed": all(r.status == "passed" for r in results),
+                "report": str(written) if written else None,
+                "scenarios": [r.to_dict() for r in results],
+            }
+        )
+    else:
+        console = _console()
+        render_results(results, cfg.mode, console)
+        if written:
+            console.print(f"drift report: {written}")
+    if any(r.status != "passed" for r in results):
+        sys.exit(1)
+
+
 # --------------------------------------------------------------------------- report
 
 

@@ -5,13 +5,12 @@ from collections.abc import Callable, Iterator
 import pytest
 from support_agent import AgentConfig
 from support_agent import tools as agent_tools
+from support_agent.agent import Provider
 from support_agent.simulated_model import respond
+from support_agent.suite import OFFLINE_URL, simulated_config
 
 from replex import Session
 from replex.testing import MockProvider
-
-# Replay never touches the network: any URL works, nothing listens on port 9.
-OFFLINE_URL = "http://127.0.0.1:9"
 
 
 @pytest.fixture(autouse=True)
@@ -32,23 +31,8 @@ def agent_config(replex_session: Session) -> Iterator[Callable[..., AgentConfig]
     if replex_session.mode != "replay":
         mock = MockProvider(respond).start()
 
-    def make(provider: str = "anthropic", stream: bool = False) -> AgentConfig:
-        base = mock.url if mock else OFFLINE_URL
-        if provider == "openai":
-            return AgentConfig.from_env(
-                provider="openai",
-                base_url=f"{base}/v1",
-                api_key="test-key-not-real",
-                model="mock-mimo",
-                stream=stream,
-            )
-        return AgentConfig.from_env(
-            provider="anthropic",
-            base_url=base,
-            api_key="test-key-not-real",
-            model="mock-sonnet",
-            stream=stream,
-        )
+    def make(provider: Provider = "anthropic", stream: bool = False) -> AgentConfig:
+        return simulated_config(mock.url if mock else OFFLINE_URL, provider, stream)
 
     yield make
     if mock:
