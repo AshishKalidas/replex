@@ -233,3 +233,4 @@ suite with its 90% coverage gate, the example's replay tests, the redaction chec
 `make demo` on Python 3.10 to 3.13; the console's vitest suite and build (checking the
 committed build is current); and builds the wheel and the Docker image.
 
+
