@@ -177,6 +177,41 @@ def test_report(project: Path) -> None:
     (project / "empty").mkdir()
     res = run("report", "tests/cassettes", "empty", "--fail-on-drift")
     assert res.exit_code == 0 and "no candidate" in res.output
+    run("report", "tests/cassettes", ".replex/candidates", "--markdown", "t.md", "--title", "Mine")
+    assert (project / "t.md").read_text().startswith("## ❌ Mine\n")
+
+
+def test_report_compact(project: Path) -> None:
+    candidates = project / ".replex/candidates"
+    (candidates / "same.replex.json").rename(candidates / "new_one.replex.json")
+    res = run(
+        "report",
+        "tests/cassettes",
+        ".replex/candidates",
+        "--markdown",
+        "c.md",
+        "--compact",
+        "--title",
+        "Agent review",
+        "--link",
+        "https://ci.example/run/1",
+        "--max-chars",
+        "5000",
+    )
+    assert res.exit_code == 0
+    md = (project / "c.md").read_text()
+    assert md.startswith("## ❌ Agent review: 1 of 1 scenario changed behaviour\n")
+    assert "· [full report](https://ci.example/run/1)" in md
+    assert "| `refund` | ❌ Behaviour changed:" in md
+    assert "| `new_one` | 🆕 New scenario" in md
+    assert "1 recorded scenario not run live</summary>\n\n`same`" in md
+    (project / "empty").mkdir()
+    run("report", "tests/cassettes", "empty", "--markdown", "e.md", "--compact")
+    assert "no latest runs to compare" in (project / "e.md").read_text()
+    res = CliRunner().invoke(
+        cli, ["report", "tests/cassettes", "empty", "--markdown", "e.md", "--link", "x"]
+    )
+    assert res.exit_code == 2 and "--compact only" in res.output
 
 
 def test_redact_check(project: Path) -> None:

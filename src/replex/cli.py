@@ -250,6 +250,18 @@ def drift_cmd(
     type=click.Path(dir_okay=False, path_type=Path),
     help="write the reports as JSON",
 )
+@click.option(
+    "--compact",
+    is_flag=True,
+    help="write the Markdown as a short pull request comment (one row per scenario)",
+)
+@click.option("--title", help="heading of the Markdown summary")
+@click.option("--link", help="URL of the full report, linked from the compact summary")
+@click.option(
+    "--max-chars",
+    type=click.IntRange(min=200),
+    help="truncate the compact summary to this length (default: GitHub's comment limit)",
+)
 @click.option("--policy", "policy_path", type=click.Path(dir_okay=False), help="policy YAML file")
 @click.option("--fail-on-drift", is_flag=True, help="exit 1 if any pair fails its policy")
 @_errors
@@ -259,21 +271,33 @@ def report_cmd(
     html_out: Path | None,
     md_out: Path | None,
     json_out: Path | None,
+    compact: bool,
+    title: str | None,
+    link: str | None,
+    max_chars: int | None,
     policy_path: str | None,
     fail_on_drift: bool,
 ) -> None:
     """Compare every cassette in CANDIDATE_DIR with its baseline and write reports."""
     from replex.drift.compare import compare
-    from replex.drift.report import html_report, reports_markdown
+    from replex.drift.report import (
+        GITHUB_COMMENT_LIMIT,
+        comment_markdown,
+        html_report,
+        reports_markdown,
+    )
 
+    if not compact and (link or max_chars):
+        raise click.UsageError("--link and --max-chars apply to --compact only")
     cfg = _config()
     policy = _policy(policy_path, cfg)
     baselines = {name_from_path(p): p for p in list_cassettes(baseline_dir)}
-    reports = []
-    for cand in list_cassettes(candidate_dir):
-        name = name_from_path(cand)
-        if name in baselines:
-            reports.append(compare(baselines[name], cand, policy, name=name))
+    candidates = {name_from_path(p): p for p in list_cassettes(candidate_dir)}
+    reports = [
+        compare(baselines[name], cand, policy, name=name)
+        for name, cand in candidates.items()
+        if name in baselines
+    ]
     console = _console()
     if not reports:
         console.print(
@@ -297,7 +321,18 @@ def report_cmd(
         written = atomic_write_text(html_out, html_report(reports)).resolve()
         console.print(f"HTML report: {written}")
     if md_out:
-        written = atomic_write_text(md_out, reports_markdown(reports)).resolve()
+        if compact:
+            markdown = comment_markdown(
+                reports,
+                title=title or "RepleX behaviour review",
+                missing=[name for name in baselines if name not in candidates],
+                new=[name for name in candidates if name not in baselines],
+                link=link,
+                max_chars=max_chars or GITHUB_COMMENT_LIMIT,
+            )
+        else:
+            markdown = reports_markdown(reports, title=title or "RepleX drift report")
+        written = atomic_write_text(md_out, markdown).resolve()
         console.print(f"Markdown summary: {written}")
     if json_out:
         text = json.dumps([r.to_dict() for r in reports], indent=2, sort_keys=True) + "\n"

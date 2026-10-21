@@ -1,0 +1,214 @@
+name: RepleX agent review
+description: >-
+  Run an agent's RepleX tests in replay or drift mode, publish the HTML report as an artifact,
+  summarise the behaviour changes on the job page and in a single pull request comment.
+author: Ashish Kalidas
+branding:
+  icon: repeat
+  color: blue
+
+inputs:
+  mode:
+    description: >-
+      replay (offline: the tests run against the recordings) or drift (the tests run live and
+      are compared with the recordings; pass provider keys to the step through env).
+    required: false
+    default: replay
+  working-directory:
+    description: The project directory, where pytest is run and relative paths are resolved.
+    required: false
+    default: "."
+  baseline-dir:
+    description: Directory of the recorded cassettes, relative to working-directory.
+    required: false
+    default: tests/cassettes
+  candidate-dir:
+    description: Directory where drift runs write their candidates, relative to working-directory.
+    required: false
+    default: .replex/candidates
+  policy:
+    description: Drift policy file, relative to working-directory. Default the project's configured policy.
+    required: false
+    default: ""
+  python-version:
+    description: Python version to install.
+    required: false
+    default: "3.12"
+  install:
+    description: >-
+      Command that installs the project and its test dependencies, run in working-directory
+      after RepleX and pytest are installed (for example `pip install -e ".[test]"`).
+    required: false
+    default: ""
+  pytest-args:
+    description: Extra arguments for pytest, split on whitespace.
+    required: false
+    default: ""
+  fail-on-drift:
+    description: >-
+      Fail the step when a scenario's behaviour changed beyond its policy. With false, a drift
+      run that fails only because of drift still passes; other test failures always fail.
+    required: false
+    default: "true"
+  comment:
+    description: >-
+      Post the summary as a pull request comment, updated in place on every run. Skipped
+      outside pull_request events and for pull requests from forks.
+    required: false
+    default: "true"
+  title:
+    description: Heading of the summary and the comment.
+    required: false
+    default: RepleX behaviour review
+  artifact-name:
+    description: Name of the uploaded report artifact (make it unique per job in a matrix).
+    required: false
+    default: replex-report
+  github-token:
+    description: >-
+      Token used to post the comment: the workflow's GITHUB_TOKEN or a GitHub App token, with
+      pull-requests write permission.
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  drifted:
+    description: true when at least one scenario's behaviour changed beyond its policy.
+    value: ${{ steps.report.outputs.drifted }}
+  report-path:
+    description: Absolute path of the HTML report.
+    value: ${{ steps.report.outputs.report-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install RepleX
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        INSTALL: ${{ inputs.install }}
+      run: |
+        python -m pip install --disable-pip-version-check "$ACTION_PATH" pytest
+        if [ -n "$INSTALL" ]; then
+          bash -euo pipefail -c "$INSTALL"
+        fi
+
+    - name: Run the agent tests
+      id: tests
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        MODE: ${{ inputs.mode }}
+        PYTEST_ARGS: ${{ inputs.pytest-args }}
+      run: |
+        case "$MODE" in
+          replay) mode_args=() ;;
+          drift) mode_args=(--replex-mode=drift) ;;
+          *) echo "::error::mode must be replay or drift, not '$MODE'"; exit 2 ;;
+        esac
+        read -r -a extra_args <<< "$PYTEST_ARGS"
+        status=0
+        python -m pytest "${mode_args[@]}" "${extra_args[@]}" || status=$?
+        echo "exit-code=$status" >> "$GITHUB_OUTPUT"
+
+    - name: Build the report
+      id: report
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        MODE: ${{ inputs.mode }}
+        BASELINE_DIR: ${{ inputs.baseline-dir }}
+        CANDIDATE_DIR: ${{ inputs.candidate-dir }}
+        POLICY: ${{ inputs.policy }}
+        TITLE: ${{ inputs.title }}
+        TESTS_EXIT_CODE: ${{ steps.tests.outputs.exit-code }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        MARKER: "<!-- replex-agent-review: ${{ inputs.working-directory }} -->"
+      run: |
+        out="$RUNNER_TEMP/replex-report"
+        rm -rf "$out"
+        mkdir -p "$out" "$CANDIDATE_DIR"
+        policy_args=()
+        if [ -n "$POLICY" ]; then
+          policy_args=(--policy "$POLICY")
+        fi
+        replex report "$BASELINE_DIR" "$CANDIDATE_DIR" "${policy_args[@]}" \
+          --html "$out/replex-report.html" --json "$out/replex-report.json" \
+          --markdown "$out/summary.md" --compact --title "$TITLE" \
+          --link "$RUN_URL" --max-chars 64000
+        if [ "$MODE" = drift ]; then
+          cp -R "$CANDIDATE_DIR" "$out/candidates"
+        fi
+        drifted=$(jq 'any(.[]; .passed | not)' "$out/replex-report.json")
+        if [ "$TESTS_EXIT_CODE" = 0 ]; then
+          tests="✅ Tests passed ($MODE mode)."
+        else
+          tests="❌ Tests failed ($MODE mode, pytest exit code $TESTS_EXIT_CODE): see the [job log]($RUN_URL)."
+        fi
+        {
+          echo "$MARKER"
+          echo "$tests"
+          echo
+          cat "$out/summary.md"
+        } > "$out/comment.md"
+        cat "$out/comment.md" >> "$GITHUB_STEP_SUMMARY"
+        {
+          echo "drifted=$drifted"
+          echo "report-path=$out/replex-report.html"
+          echo "dir=$out"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Upload the report
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: |
+          ${{ steps.report.outputs.dir }}/replex-report.html
+          ${{ steps.report.outputs.dir }}/replex-report.json
+          ${{ steps.report.outputs.dir }}/candidates/
+
+    - name: Comment on the pull request
+      if: >-
+        inputs.comment == 'true'
+        && github.event_name == 'pull_request'
+        && github.event.pull_request.head.repo.full_name == github.repository
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPO: ${{ github.repository }}
+        PR: ${{ github.event.pull_request.number }}
+        BODY: ${{ steps.report.outputs.dir }}/comment.md
+        MARKER: "<!-- replex-agent-review: ${{ inputs.working-directory }} -->"
+      run: |
+        payload=$(jq -n --rawfile body "$BODY" '{body: $body}')
+        id=$(gh api --paginate "repos/$REPO/issues/$PR/comments" \
+          --jq '.[] | select(.user.type == "Bot") | [.id, .body] | @json' \
+          | jq -rs --arg marker "$MARKER" 'map(select(.[1] | startswith($marker)))[0][0] // empty')
+        if [ -n "$id" ]; then
+          gh api --method PATCH "repos/$REPO/issues/comments/$id" --input - <<< "$payload" > /dev/null
+        else
+          gh api --method POST "repos/$REPO/issues/$PR/comments" --input - <<< "$payload" > /dev/null
+        fi
+
+    - name: Check the result
+      shell: bash
+      env:
+        TESTS_EXIT_CODE: ${{ steps.tests.outputs.exit-code }}
+        DRIFTED: ${{ steps.report.outputs.drifted }}
+        FAIL_ON_DRIFT: ${{ inputs.fail-on-drift }}
+        ARTIFACT: ${{ inputs.artifact-name }}
+      run: |
+        if [ "$DRIFTED" = true ] && [ "$FAIL_ON_DRIFT" = true ]; then
+          echo "::error::Agent behaviour changed beyond its policy. Download the $ARTIFACT artifact."
+          exit 1
+        fi
+        if [ "$TESTS_EXIT_CODE" != 0 ] && { [ "$DRIFTED" != true ] || [ "$FAIL_ON_DRIFT" = true ]; }; then
+          echo "::error::The agent tests failed (pytest exit code $TESTS_EXIT_CODE)."
+          exit 1
+        fi

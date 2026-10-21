@@ -197,7 +197,7 @@ More in [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 | [Drift](docs/DRIFT.md) | Every policy check, the console and approving changes |
 | [Redaction](docs/REDACTION.md) | Default rules, custom patterns and the check command |
 | [Providers](docs/PROVIDERS.md) | Supported APIs, the mock provider and adding your own |
-| [CI](docs/CI.md) | A GitHub Actions workflow for replay and nightly drift checks |
+| [CI](docs/CI.md) | A GitHub Actions workflow for replay and nightly drift checks, and an action that reviews behaviour on pull requests |
 | [Limitations](docs/LIMITATIONS.md) | What replay does and doesn't prove |
 | [Decisions](docs/DECISIONS.md) | Design decisions and the reasons for them |
 

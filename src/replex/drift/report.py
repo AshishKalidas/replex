@@ -238,6 +238,109 @@ def reports_markdown(reports: Sequence[DriftReport], *, title: str = "RepleX dri
     return "\n".join(lines)
 
 
+GITHUB_COMMENT_LIMIT = 65_536
+"""The maximum length of a GitHub issue or pull request comment body, in characters."""
+
+
+def _verdict(report: DriftReport) -> tuple[str, str]:
+    """An icon and a plain-language verdict for one scenario."""
+    nf, nw = len(report.failures), len(report.warnings)
+    warnings = f"{nw} warning{'s' * (nw != 1)}"
+    if nf:
+        extra = f", {warnings}" if nw else ""
+        return "❌", f"Behaviour changed: {nf} failure{'s' * (nf != 1)}{extra}"
+    if nw:
+        return "⚠️", f"Changed within policy: {warnings}"
+    return "✅", "Behaves as recorded"
+
+
+def _finding_details(report: DriftReport) -> str:
+    rows = [f for f in report.findings if f.severity != "info"]
+    lines = [
+        f"<details><summary><code>{html.escape(report.name)}</code>: "
+        f"{html.escape(_verdict(report)[1])}</summary>",
+        "",
+        "| Severity | Check | Step | Finding |",
+        "|---|---|---|---|",
+    ]
+    for f in rows:
+        step = "" if f.step_index is None else str(f.step_index)
+        lines.append(
+            f"| {_MD_SEVERITY[f.severity]} | `{f.check}` | {step} | {_md(f.message, 200)} |"
+        )
+    lines += ["", "</details>", ""]
+    return "\n".join(lines)
+
+
+def comment_markdown(
+    reports: Sequence[DriftReport],
+    *,
+    title: str = "RepleX behaviour review",
+    missing: Sequence[str] = (),
+    new: Sequence[str] = (),
+    link: str | None = None,
+    max_chars: int = GITHUB_COMMENT_LIMIT,
+) -> str:
+    """A compact summary sized for a pull request comment.
+
+    One table row per scenario with a plain-language verdict, the findings of each changed
+    scenario in a collapsed block, and the scenarios that only one side has: ``missing`` names
+    recordings with no latest run, ``new`` names latest runs with no recording. The text
+    never exceeds ``max_chars``; whole rows and blocks are dropped from the end instead, and a
+    closing note points to ``link`` (the full report) when one is given.
+    """
+    failed = [r for r in reports if r.failures]
+    warned = [r for r in reports if r.warnings and not r.failures]
+    icon = "❌" if failed else "⚠️" if warned else "✅" if reports else "💬"
+    pointer = f"[full report]({link})" if link else "the full report"
+    if reports:
+        headline = (
+            f"{len(failed)} of {len(reports)} scenario{'s' * (len(reports) != 1)} changed behaviour"
+        )
+        counts = (
+            f"{len(reports)} compared · {len(reports) - len(failed) - len(warned)} as recorded · "
+            f"{len(warned)} within policy · {len(failed)} changed"
+        )
+    else:
+        headline = "no latest runs to compare"
+        counts = (
+            "No scenario has both a recording and a latest run. That is expected in replay "
+            "mode, where the tests check the agent against its recordings without running it live."
+        )
+    if link:
+        counts += f" · {pointer}" if reports else f" See the {pointer}."
+    head = [f"## {icon} {title}: {headline}", "", counts, ""]
+    blocks: list[str] = []
+    if reports or new:
+        blocks.append("| Scenario | Verdict | Steps | Tools (latest run) |\n|---|---|---|---|")
+        for r in reports:
+            steps = f"{r.baseline.steps} → {r.candidate.steps}"
+            mark, verdict = _verdict(r)
+            blocks.append(
+                f"| `{_md(r.name)}` | {mark} {verdict} | {steps} | "
+                f"{_md(_arrow(r.candidate.tool_names))} |"
+            )
+        for name in new:
+            blocks.append(f"| `{_md(name)}` | 🆕 New scenario: no recording to compare | | |")
+        blocks.append("")
+    for r in failed + warned:
+        blocks.append(_finding_details(r))
+    if missing:
+        names = ", ".join(f"`{_md(name)}`" for name in missing)
+        blocks.append(
+            f"<details><summary>{len(missing)} recorded scenario{'s' * (len(missing) != 1)} "
+            f"not run live</summary>\n\n{names}\n\n</details>\n"
+        )
+    note = f"\n_Truncated to fit in a comment: every scenario is in {pointer}._\n"
+    text = "\n".join(head) + "\n"
+    for i, block in enumerate(blocks):
+        reserve = len(note) if i < len(blocks) - 1 else 0
+        if len(text) + len(block) + 1 + reserve > max_chars:
+            return (text + note)[:max_chars]
+        text += block + "\n"
+    return text
+
+
 # ---------------------------------------------------------------------- html
 
 

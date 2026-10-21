@@ -102,6 +102,113 @@ If you prefer a single step, `replex report ... --fail-on-drift` exits 1 when an
 its policy, and `pytest --replex-mode=drift --replex-report=replex-report.html` writes the HTML
 report for the drifted cassettes at the end of the test run.
 
+## The GitHub Action: a behaviour review on every pull request
+
+The repository is also a composite action that runs the steps above and reports on the pull
+request itself. Copy this into `.github/workflows/agent-review.yml`:
+
+```yaml
+name: Agent review
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write      # only for the comment
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: AshishKalidas/replex@main     # pin a tag or commit SHA in real use
+        with:
+          mode: replay
+          install: pip install -e ".[test]"
+```
+
+The action installs Python, RepleX (from the action's own checkout) and pytest, runs your
+`install` command, then:
+
+1. runs `pytest` (`pytest --replex-mode=drift` in drift mode) and records the exit code;
+2. runs `replex report BASELINE CANDIDATES --compact` to write the HTML report, a JSON report
+   and a comment-sized Markdown summary;
+3. uploads the HTML and JSON reports (and, in drift mode, the candidates) as the
+   `replex-report` artifact;
+4. appends the summary to the job summary page;
+5. posts the summary as a pull request comment, or edits its earlier comment in place: the
+   comment starts with a hidden `<!-- replex-agent-review: WORKING-DIRECTORY -->` marker, so
+   each project in a repository keeps exactly one comment however often the job re-runs;
+6. fails the step if the tests failed, or if a scenario drifted and `fail-on-drift` is true.
+
+| Input | Default | Meaning |
+|---|---|---|
+| `mode` | `replay` | `replay` (offline, from the recordings) or `drift` (live, compared with them) |
+| `working-directory` | `.` | Project directory; pytest runs here and paths are relative to it |
+| `baseline-dir` | `tests/cassettes` | Recorded cassettes |
+| `candidate-dir` | `.replex/candidates` | Where drift runs write their candidates |
+| `policy` | project setting | Drift policy file |
+| `python-version` | `3.12` | Python to install |
+| `install` | none | Command that installs your project and its test dependencies |
+| `pytest-args` | none | Extra pytest arguments, split on whitespace |
+| `fail-on-drift` | `true` | With `false`, a drift run that fails only because of drift passes |
+| `comment` | `true` | Post or update the pull request comment |
+| `title` | `RepleX behaviour review` | Heading of the summary and the comment |
+| `artifact-name` | `replex-report` | Artifact name; make it unique per job in a matrix |
+| `github-token` | `github.token` | Token for the comment, with `pull-requests: write` |
+
+Outputs: `drifted` (`true` or `false`) and `report-path` (the HTML report on the runner).
+
+**Replay mode** needs no secrets, so it is safe for pull requests from forks. Their
+`GITHUB_TOKEN` is read-only, and the action skips the comment for them (and for any event that
+is not `pull_request`); the job summary and the artifact still have the results. Nothing runs
+live in replay mode, so the comment reports the test result and lists the recorded scenarios.
+Do not switch to `pull_request_target` to get comments on forks: it would run fork code with
+a writable token.
+
+**Drift mode** runs live, so pass the provider key to the step and keep it out of pull requests
+from forks, for example on a schedule:
+
+```yaml
+on:
+  schedule:
+    - cron: "0 3 * * *"
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: AshishKalidas/replex@main
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        with:
+          mode: drift
+          install: pip install -e ".[test]"
+          comment: "false"
+```
+
+The comment has one row per scenario with its verdict in plain words (behaves as recorded,
+changed within policy, or behaviour changed), the findings of each changed scenario in a
+collapsed block, and links to the run for the full report. GitHub limits a comment to 65,536
+characters; a longer summary drops whole rows and blocks from the end and says so. Locally:
+
+```bash
+replex report tests/cassettes .replex/candidates --markdown comment.md --compact \
+  --title "Agent review" --link https://example.com/full-report --max-chars 20000
+```
+
+[`.github/workflows/agent-review.yml`](../.github/workflows/agent-review.yml) runs the action
+on this repository's example agent in replay mode, with a commented, opt-in nightly drift job.
+
 ## Tools during drift runs
 
 In drift mode tools default to `auto`: a call whose name and arguments match the baseline is

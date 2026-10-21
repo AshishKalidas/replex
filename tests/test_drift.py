@@ -14,7 +14,13 @@ from tracekit import make_trace
 
 from replex import compare, load_policy
 from replex.cassette import Cassette, save
-from replex.drift import html_report, render_report, render_trace, reports_markdown
+from replex.drift import (
+    comment_markdown,
+    html_report,
+    render_report,
+    render_trace,
+    reports_markdown,
+)
 from replex.drift.compare import as_trace, similarity
 from replex.drift.policy import Policy, parse_policy
 from replex.errors import PolicyError
@@ -396,6 +402,57 @@ def test_report_json_and_markdown() -> None:
     assert summary.startswith("## ❌ RepleX drift report")
     assert "2 cassette(s) compared · 1 passed · 1 failed" in summary
     assert "✅ RepleX drift" in summary
+
+
+def warning_report() -> Any:
+    cand = variant(*BASE.steps[:6], ("search_docs", {"q": "refund"}), BASE.steps[6])
+    pol = policy(new_tools={"severity": "warn"}, tool_sequence={"severity": "warn"})
+    report = compare(BASE, cand, pol)
+    assert report.passed and report.warnings and not report.failures
+    return report
+
+
+def test_comment_markdown() -> None:
+    reports = [failing_report(), warning_report(), compare(BASE, BASE)]
+    md = comment_markdown(
+        reports, missing=["old_one"], new=["brand_new"], link="https://ci.example/run/1"
+    )
+    assert md.startswith("## ❌ RepleX behaviour review: 1 of 3 scenarios changed behaviour\n")
+    assert "3 compared · 1 as recorded · 1 within policy · 1 changed · [full report](" in md
+    assert "| `refund_request` | ❌ Behaviour changed: 3 failures | 7 → 6 |" in md
+    assert "| ⚠️ Changed within policy: 2 warnings |" in md
+    assert "| ✅ Behaves as recorded | 7 → 7 |" in md
+    assert "| `brand_new` | 🆕 New scenario: no recording to compare | | |" in md
+    assert md.count("<details>") == 3 and md.count("</details>") == 3
+    assert "<summary><code>refund_request</code>: Behaviour changed: 3 failures</summary>" in md
+    assert "1 recorded scenario not run live</summary>\n\n`old_one`" in md
+    assert "latency" not in md  # info findings stay in the full report
+    assert "Truncated" not in md
+
+
+def test_comment_markdown_without_candidates() -> None:
+    md = comment_markdown([], title="Agent review", missing=["a", "b"])
+    assert md.startswith("## 💬 Agent review: no latest runs to compare\n")
+    assert "expected in replay mode" in md and "| Scenario |" not in md
+    assert "2 recorded scenarios not run live" in md
+    assert comment_markdown([]).count("\n") == 4
+
+
+def test_comment_markdown_truncates_whole_blocks() -> None:
+    reports = [failing_report()] * 400
+    assert len(comment_markdown(reports, max_chars=10**7)) > 65_536
+    md = comment_markdown(reports, link="https://ci.example/run/1")
+    assert len(md) <= 65_536
+    assert md.endswith(
+        "_Truncated to fit in a comment: every scenario is in "
+        "[full report](https://ci.example/run/1)._\n"
+    )
+    assert md.count("<details>") == md.count("</details>")
+    small = comment_markdown(reports, max_chars=600)
+    assert len(small) <= 600 and "every scenario is in the full report" in small
+    assert "| `refund_request` |" in small
+    whole = comment_markdown(reports[:1])
+    assert comment_markdown(reports[:1], max_chars=len(whole)) == whole
 
 
 def test_terminal_rendering() -> None:

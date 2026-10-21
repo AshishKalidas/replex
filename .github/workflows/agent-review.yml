@@ -1,0 +1,62 @@
+name: Agent review
+
+# Reviews the example agent's behaviour on every pull request with this repository's own action.
+# Replay mode is offline: no secrets are used, so pull requests from forks run it too (their
+# token is read-only, and the action skips the comment for them).
+
+on:
+  pull_request:
+  # Uncomment to enable the nightly drift job below.
+  # schedule:
+  #   - cron: "0 3 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-review-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  replay:
+    name: Replay (examples/support_agent)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ./
+        with:
+          mode: replay
+          working-directory: examples/support_agent
+          baseline-dir: cassettes
+          title: Support agent behaviour
+
+  # Opt-in nightly drift check against a live model, as a template: point working-directory and
+  # baseline-dir at a project whose agent calls OpenRouter and whose recordings came from it,
+  # with "openrouter.ai" in its `intercept_hosts`, and add an OPENROUTER_API_KEY repository
+  # secret. Scheduled runs check out the default branch, so fork code never sees the secret.
+  # The report goes to the job summary and the artifact; there is no pull request to comment on.
+  #
+  # drift:
+  #   name: Nightly drift (examples/support_agent)
+  #   if: github.event_name == 'schedule'
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: read
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         persist-credentials: false
+  #     - uses: ./
+  #       env:
+  #         OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+  #       with:
+  #         mode: drift
+  #         working-directory: examples/support_agent
+  #         baseline-dir: cassettes/live/openrouter
+  #         comment: "false"

@@ -38,6 +38,9 @@ Design choices worth knowing about, one line each: decision, reason.
 - **A drift run whose agent raised keeps its candidate but is not compared (outcome `error`).** A crash is a test failure, not behavioural drift.
 - **`replex approve` copies the candidate over the baseline, then deletes the candidate, and is refused in CI.** Approval is a local, reviewed act, and a stale candidate should not be approved twice.
 - **`replex report` exits 0 unless `--fail-on-drift` is given.** It is usually a reporting step after the tests already decided pass or fail.
+- **The GitHub Action comments only on `pull_request` events from the same repository, never via `pull_request_target`.** A fork's code must never run with a writable token or a secret.
+- **The action keeps one comment per project, found by a hidden marker naming its working directory, and edits it in place.** Re-runs should not bury a pull request in comments.
+- **The compact Markdown summary truncates by dropping whole rows and blocks, never mid-table.** A cut-off table or an unclosed `<details>` renders worse than a shorter comment.
 
 ## Console and report
 
