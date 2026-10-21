@@ -93,6 +93,8 @@ def mock_openrouter(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator
     """The OpenRouter target, served by the mock provider, writing under a temporary folder."""
     monkeypatch.setattr(record_live, "LIVE", tmp_path)
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key-not-real")
+    # RepleX refuses to record when CI is set; this test records against the mock on purpose.
+    monkeypatch.delenv("CI", raising=False)
     with MockProvider(respond) as mock:
         monkeypatch.setenv("OPENROUTER_BASE_URL", f"{mock.url}/v1")
         yield tmp_path
