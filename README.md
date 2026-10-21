@@ -1,6 +1,7 @@
 # RepleX
 
 [![CI](https://github.com/AshishKalidas/replex/actions/workflows/ci.yml/badge.svg)](https://github.com/AshishKalidas/replex/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/replex)](https://pypi.org/project/replex/)
 
 **Know when your AI agent starts behaving differently, before your users do.**
 
@@ -41,7 +42,7 @@ and decide whether the difference is a regression or an improvement.
 You don't need an API key or any code of your own to see what RepleX does.
 
 ```bash
-pip install "replex[console] @ git+https://github.com/AshishKalidas/replex"
+pip install "replex[console]"
 replex console --sample
 ```
 
@@ -107,7 +108,7 @@ does not run it. The check fails with `blocked_tool` and tells you which call it
 **1. Install it in your project.**
 
 ```bash
-pip install "replex[console] @ git+https://github.com/AshishKalidas/replex"
+pip install "replex[console]"
 ```
 
 **2. Mark your tools and a test.** Your agent code doesn't change.
