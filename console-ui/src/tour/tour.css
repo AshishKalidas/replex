@@ -1,0 +1,81 @@
+/* Guided tour: a dimmed page with one element lit, and a callout beside it. */
+
+.tour {
+  --tour-scrim: rgba(29, 29, 31, 0.36);
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+}
+
+.tour-blocker { position: absolute; inset: 0; }
+.tour-dim { background: var(--tour-scrim); }
+
+.tour-spotlight {
+  position: fixed;
+  border-radius: 18px;
+  box-shadow: 0 0 0 200vmax var(--tour-scrim);
+  pointer-events: none;
+}
+
+.tour-callout {
+  position: fixed;
+  width: min(360px, calc(100vw - 32px));
+  padding: 22px 24px 20px;
+  border-radius: 18px;
+  background: var(--page);
+  color: var(--text);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+.tour-callout-center { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+.tour-arrow {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px;
+  background: var(--page);
+  border-radius: 3px;
+  transform: rotate(45deg);
+}
+.tour-callout-bottom .tour-arrow { top: 0; }
+.tour-callout-top .tour-arrow { bottom: 0; }
+.tour-callout-right .tour-arrow { left: 0; }
+.tour-callout-left .tour-arrow { right: 0; }
+
+.tour-count { color: var(--text-2); font-size: 12px; letter-spacing: -0.01em; }
+.tour-title {
+  margin-top: 6px;
+  font-size: 19px;
+  line-height: 1.21;
+  letter-spacing: 0.012em;
+}
+.tour-body {
+  margin-top: 8px;
+  color: var(--text-2);
+  font-size: 15px;
+  line-height: 1.47;
+  letter-spacing: -0.009em;
+}
+
+.tour-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+}
+.tour-moves { display: flex; gap: 10px; margin-left: auto; }
+.tour-moves .button { min-width: 72px; min-height: 36px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .tour-callout { animation: tour-in var(--dur) var(--ease); }
+  .tour-callout-center { animation-name: tour-in-center; }
+}
+@keyframes tour-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes tour-in-center {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}

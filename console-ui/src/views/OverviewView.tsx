@@ -5,6 +5,7 @@ import { headline, humanize, scenarios, verdictOf, VERDICT_LABEL, VERDICT_TONE, 
 import { useAsync, useKeyNav } from "../hooks";
 import { href } from "../router";
 import { customerMessage } from "../story";
+import { CHANGED_SCENARIO } from "../tour/SampleTour";
 import type { DriftReport } from "../types";
 
 interface Loaded {
@@ -101,11 +102,14 @@ export function OverviewView({
   workspace,
   workspaces = [],
   onSwitchWorkspace,
+  onTakeTour,
 }: {
   source: DataSource;
   workspace?: WorkspaceInfo;
   workspaces?: WorkspaceInfo[];
   onSwitchWorkspace?: (id: string) => void;
+  /** Offered on the sample: replays the guided tour. */
+  onTakeTour?: () => void;
 }) {
   const data = useAsync(() => load(source), [source]);
   const list = data.state === "ready" ? data.data.list : [];
@@ -143,10 +147,19 @@ export function OverviewView({
         title={title(list, reports)}
         lede={isSample ? SAMPLE_STORY : PURPOSE}
         actions={
-          firstChanged && (
-            <a className="button" href={href({ view: "scenario", name: firstChanged.name })}>
-              {isSample ? "See what the prompt change broke" : "Start reviewing"}
-            </a>
+          (firstChanged || onTakeTour) && (
+            <>
+              {firstChanged && (
+                <a className="button" href={href({ view: "scenario", name: firstChanged.name })}>
+                  {isSample ? "See what the prompt change broke" : "Start reviewing"}
+                </a>
+              )}
+              {onTakeTour && (
+                <button type="button" className="link cta" onClick={onTakeTour}>
+                  Take the tour
+                </button>
+              )}
+            </>
           )
         }
       />
@@ -162,7 +175,13 @@ export function OverviewView({
           const report = reports.get(s.name) ?? null;
           const verdict = verdictOf(report);
           return (
-            <li key={s.name} data-nav-index={i} className={i === active ? "row-active" : ""} onMouseEnter={() => setActive(i)}>
+            <li
+              key={s.name}
+              data-nav-index={i}
+              data-tour={s === firstChanged ? CHANGED_SCENARIO : undefined}
+              className={i === active ? "row-active" : ""}
+              onMouseEnter={() => setActive(i)}
+            >
               <a href={href({ view: "scenario", name: s.name })} className="scenario">
                 <div className="scenario-name">
                   <span className="scenario-title">{humanize(s.name)}</span>

@@ -1,8 +1,9 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import type { DataSource, WorkspaceInfo } from "./api";
 import { Kbd, Logo, Segmented } from "./components/common";
 import { useRoute } from "./hooks";
 import { href, type Route } from "./router";
+import { SampleTour, useFirstVisitTour } from "./tour/SampleTour";
 import { CompareView } from "./views/CompareView";
 import { OverviewView } from "./views/OverviewView";
 import { RunsView } from "./views/RunsView";
@@ -33,11 +34,22 @@ interface Props {
 export function App({ source, workspace, workspaces = [], onSwitchWorkspace }: Props) {
   const route = useRoute();
   const current = section(route);
+  const sample = workspace?.id === "sample";
+  const [touring, setTouring] = useFirstVisitTour(sample && route.view === "overview");
+  const takeTour = useCallback(() => setTouring(true), [setTouring]);
   const view = useMemo(() => {
     const others = workspaces.filter((w) => w.id !== workspace?.id);
     switch (route.view) {
       case "overview":
-        return <OverviewView source={source} workspace={workspace} workspaces={workspaces} onSwitchWorkspace={onSwitchWorkspace} />;
+        return (
+          <OverviewView
+            source={source}
+            workspace={workspace}
+            workspaces={workspaces}
+            onSwitchWorkspace={onSwitchWorkspace}
+            onTakeTour={sample ? takeTour : undefined}
+          />
+        );
       case "scenario":
         return <ScenarioView key={route.name} source={source} name={route.name} />;
       case "runs":
@@ -55,7 +67,7 @@ export function App({ source, workspace, workspaces = [], onSwitchWorkspace }: P
       case "compare":
         return <CompareView source={source} a={route.a} b={route.b} step={route.step} />;
     }
-  }, [route, source, workspace, workspaces, onSwitchWorkspace]);
+  }, [route, source, workspace, workspaces, onSwitchWorkspace, sample, takeTour]);
 
   const tabs = [
     { id: "overview", label: "Overview", to: href({ view: "overview" }) },
@@ -99,6 +111,7 @@ export function App({ source, workspace, workspaces = [], onSwitchWorkspace }: P
         </span>
         <span>Runs on this machine only. Secrets are redacted before anything is saved.</span>
       </footer>
+      {touring && <SampleTour page={route.view} onClose={() => setTouring(false)} />}
     </div>
   );
 }

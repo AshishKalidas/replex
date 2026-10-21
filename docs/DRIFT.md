@@ -366,6 +366,11 @@ wrote, then what the agent did and answered before and after the change, with sk
 steps marked. It ends with the decision (accept or reject), followed by the numbers, the aligned
 step-by-step diff and the raw policy findings for engineers.
 
+The first time you open the sample, a short guided tour walks through it: the agent and the
+prompt change, the conversation RepleX caught, what the customer wrote, the step the agent now
+skips, and the decision. Skip it with **Esc**; replay it from **Take the tour** on the sample
+overview.
+
 ## Approving new behaviour
 
 If the drift is intended, open the scenario in the console and answer "Is this what you wanted?"

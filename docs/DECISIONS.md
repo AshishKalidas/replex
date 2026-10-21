@@ -68,6 +68,7 @@ Design choices worth knowing about, one line each: decision, reason.
 - **The console re-reads its workspace when the window regains focus, and keeps the current view on screen while it does.** New recordings appear without a reload or a flash of loading states.
 - **End-to-end tests run the real `replex console` in Chromium, one server per Playwright worker over a temporary project restored before each test.** Accepting and rejecting write files, so only a real server over disposable copies proves the flow, and tests stay parallel.
 - **The console's design is light-only.** One carefully tuned theme rather than two half-tuned ones.
+- **A five-step guided tour opens on the first visit to the sample overview only, and is remembered in localStorage; storage that cannot be read counts as already seen.** The sample exists to explain RepleX in a minute, while your project and the static report should never be interrupted; offering the tour on every visit would be worse than not offering it.
 - **Long text diffs fall back to a whole before/after replacement when the texts share less than half their words.** A word-level diff of two unrelated answers is unreadable confetti.
 
 ## Example, packaging and tooling
