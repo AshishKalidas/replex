@@ -14,6 +14,11 @@ function remembered(): string | null {
   }
 }
 
+/** The workspace named in the page address (`?workspace=sample-models`), so a link can open one. */
+function requested(): string | null {
+  return new URLSearchParams(window.location.search).get("workspace");
+}
+
 function remember(id: string): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, id);
@@ -37,8 +42,8 @@ export function Console() {
     listWorkspaces().then(
       (data) => {
         setWorkspaces(data.workspaces);
-        const saved = remembered();
-        setActive(data.workspaces.some((w) => w.id === saved) ? saved : data.default);
+        const wanted = [requested(), remembered()].find((id) => data.workspaces.some((w) => w.id === id));
+        setActive(wanted ?? data.default);
       },
       (err: unknown) => setError(err instanceof Error ? err.message : String(err)),
     );
@@ -66,6 +71,11 @@ export function Console() {
   const switchTo = (id: string) => {
     if (id === active) return;
     remember(id);
+    if (requested() !== null) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("workspace", id);
+      window.history.replaceState(null, "", url);
+    }
     setActive(id);
     window.location.hash = href({ view: "overview" });
   };

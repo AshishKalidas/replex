@@ -117,6 +117,8 @@ def test_workspaces_list_project_and_sample(client: TestClient) -> None:
     assert project["writable"] is True
     assert data["workspaces"][1]["label"] == "Sample workspace"
     assert data["workspaces"][1]["writable"] is False
+    assert project["description"] is None
+    assert "customer-support agent" in data["workspaces"][1]["description"]
 
 
 def test_empty_project_opens_on_the_sample(tmp_path: Path) -> None:

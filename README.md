@@ -7,9 +7,9 @@
 RepleX records what your agent does (every model call and every tool call) and turns those
 recordings into tests that run offline, for free, in milliseconds. When you change a prompt,
 swap a model or refactor your code, it runs the same scenarios again and tells you, in plain
-language, what the agent now does differently.
+language, what the agent now does differently, what that costs, and whether you want to keep it.
 
-![The RepleX console: two scenarios need review](docs/images/console-overview.png)
+![The RepleX console, showing a model swap: one scenario needs review](docs/images/console-overview.png)
 
 ## Why I built this
 
@@ -29,6 +29,8 @@ The underlying problem is that agents are hard to test:
   people stop running them.
 - **Behaviour changes are invisible.** Asserting on the final text misses what actually
   matters: which tools the agent called, in what order, with which arguments.
+- **Model choices are guesses.** "Can we move to the cheaper model?" is answered by feel,
+  because nobody can see where the two models actually differ.
 
 RepleX treats an agent run like a snapshot test. Record it once. Replay it offline on every
 commit. After a change, compare the new behaviour with the recording under a policy you write,
@@ -43,15 +45,44 @@ pip install "replex[console] @ git+https://github.com/AshishKalidas/replex"
 replex console --sample
 ```
 
-That opens the **sample workspace**: a customer-support agent whose prompt was reworded.
-RepleX caught that two of its four scenarios changed behaviour, and the console shows you
-exactly how: what the customer wrote, what the agent did and answered before the change, and
-what it does now. Here it skips the refund-policy check and searches the docs instead.
+That opens two bundled workspaces, switched from the top bar:
 
-![Reviewing a scenario: what changed, side by side, and the decision](docs/images/console-scenario.png)
+- **Sample** is a customer-support agent whose prompt was reworded. RepleX caught that two of
+  its four scenarios changed behaviour: it skips the refund-policy check and searches the docs
+  instead. The first time you open it, a short tour walks you through what you are looking at.
+- **Model swap** is real. Claude Sonnet 5.5 handled four support conversations; the same
+  conversations then ran on Claude Haiku 5.5, which is about twenty times cheaper per token.
+  The refund flows match. On "Where is my order?" the cheaper model skips the docs lookup, so
+  it can no longer give a delivery estimate, and the run costs 96% less.
+
+![Reviewing a scenario: the conversation before and after, the decision, and its history](docs/images/console-scenario.png)
 
 From a clone of this repository, `make demo` runs the whole loop for real, offline: it replays
 the example's recordings, changes the prompt, catches the drift and writes an HTML report.
+
+## What it does
+
+- **Records and replays agents.** Model calls through `httpx`, `httpx2`, `requests` and
+  `aiohttp` (which covers the official Anthropic and OpenAI SDKs, streaming or not) and your
+  tool calls, saved as readable JSON. Replay uses no network and has no side effects.
+- **Detects behavioural drift.** A YAML policy decides which differences fail, warn or are
+  ignored: tool order, tool arguments, new or forbidden tools, answer wording, steps, tokens
+  and cost.
+- **Judges meaning, not wording.** An optional model-graded check asks whether two answers
+  say the same thing. The verdict is itself recorded, so CI re-checks are free and
+  deterministic.
+- **Shows what a change costs.** Per-run cost from a price table (or the provider's own
+  figure), and a policy check for cost regressions.
+- **Measures consistency.** Run a scenario N times and see how many distinct paths the agent
+  takes, and whether the recorded one is the majority.
+- **Keeps history.** Every drift check and every accept or reject decision, so you can see
+  when behaviour changed and when a change was accepted.
+- **Explains itself.** A local console presents each scenario as a conversation: what the
+  customer wrote, what the agent did and said before and after, then one question: is this
+  what you wanted?
+- **Runs without pytest.** Describe scenarios in a YAML suite and use `replex run`.
+- **Reviews pull requests.** A GitHub Action posts the behaviour review as a PR comment.
+- **Keeps secrets out.** Redaction happens before anything is written, and a CI check proves it.
 
 ## Use it on your own agent
 
@@ -61,9 +92,7 @@ the example's recordings, changes the prompt, catches the drift and writes an HT
 pip install "replex[console] @ git+https://github.com/AshishKalidas/replex"
 ```
 
-**2. Mark your tools and a test.** Your agent code doesn't change. RepleX captures model calls
-made through `httpx` and its successor `httpx2`, which cover the official Anthropic and OpenAI
-SDKs, old and new.
+**2. Mark your tools and a test.** Your agent code doesn't change.
 
 ```python
 import pytest
@@ -85,6 +114,9 @@ def test_refund_request(replex_session):
     trace.assert_tool_sequence(["get_order", "check_refund_policy", "create_refund_request"])
     trace.assert_no_tool("delete_*")
 ```
+
+No pytest? Put the scenarios in a file instead and run `replex run`; see
+[docs/SUITES.md](docs/SUITES.md).
 
 **3. Record once, with a real key.** Each scenario is saved as a readable JSON file in
 `tests/cassettes/`, with API keys and personal data redacted before anything touches disk.
@@ -117,9 +149,7 @@ replex console
 The console opens on your project: which scenarios changed and, for each one, the
 conversation before and after your change, in plain language. Then it asks one question: is
 this what you wanted? Accept it and commit the updated recording, or reject it and fix the
-change. The numbers and the full step-by-step diff are there for engineers. The page picks up
-new recordings whenever you come back to it, and the sample workspace is one click away in the
-top bar.
+change. The numbers, the step-by-step diff and the history are there for the details.
 
 ![Two runs aligned step by step](docs/images/console-compare.png)
 
@@ -139,18 +169,44 @@ defaults:
   final_output: {mode: similarity, threshold: 0.80, severity: warn}
   steps: {max_increase: 1, severity: warn}
   tokens: {max_increase_pct: 25, severity: warn}
+  cost: {max_increase_pct: 20, severity: warn}
 overrides:
   refund_request:
     final_output: {mode: json_schema, schema: schemas/refund.json, severity: fail}
 ```
 
+Wording similarity is a weak proxy. To ask whether two answers *mean* the same thing, use the
+judge: `final_output: {mode: judge, criteria: "Same decision and facts; tone may differ."}`.
 Every check, with a passing and a failing example, is in [docs/DRIFT.md](docs/DRIFT.md).
+
+## What real models did
+
+The model-swap sample comes from real runs through OpenRouter. Reading the committed
+recordings, with the same four scenarios each time:
+
+| Run | Result against the Sonnet 5.5 recording |
+|---|---|
+| Sonnet 5.5, same prompt, run again | All four scenarios behave as recorded |
+| Sonnet 5.5, friendlier prompt | Three of four change: it searches the docs instead of checking the refund policy. The refund *decisions* were still correct, so a test that only checks outcomes would have passed |
+| Haiku 5.5, same prompt | Both refund flows match. Order status changes: no docs lookup, no delivery estimate |
+
+Record your own with `make record-openrouter` (needs `OPENROUTER_API_KEY`) and compare models
+with `make drift-openrouter MODEL=...`. See [docs/WALKTHROUGH.md](docs/WALKTHROUGH.md).
 
 ## In CI
 
 Replay needs no secrets and runs on every push. A drift check calls the real model, so run it
-nightly or on demand. It produces a single-file HTML report (the same Overview and review
-pages, no server needed) to attach to the run.
+nightly or on demand. The GitHub Action runs either, uploads the HTML report and posts the
+behaviour review on the pull request:
+
+```yaml
+- uses: AshishKalidas/replex@main     # pin a tag or commit SHA in real use
+  with:
+    mode: replay
+    install: pip install -e ".[test]"
+```
+
+Or run it yourself:
 
 ```bash
 pytest                                          # every push: replay, offline
@@ -160,7 +216,7 @@ replex report tests/cassettes .replex/candidates --html replex-report.html
 ```
 
 CI can never quietly replace your recordings: recording and accepting changes are refused when
-`CI` is set. A complete GitHub Actions workflow is in [docs/CI.md](docs/CI.md).
+`CI` is set. See [docs/CI.md](docs/CI.md).
 
 ## How secrets are handled
 
@@ -179,11 +235,11 @@ Details in [docs/REDACTION.md](docs/REDACTION.md).
 
 - Replay checks **your code** against **recorded** model behaviour. It doesn't test the model;
   drift checks do that.
-- Model calls are captured through `httpx`, `httpx2` (the official Anthropic and OpenAI SDKs),
-  `requests` and `aiohttp`, and anything built on them.
+- Model calls are captured through `httpx`, `httpx2`, `requests` and `aiohttp` when installed.
+  gRPC, WebSockets and calls from other processes are not captured.
 - Tools are recorded when decorated with `@replex.tool` or wrapped with `replex.wrap_tools`.
-- Anthropic Messages and OpenAI-compatible chat completions are understood natively, streaming
-  or not; other APIs are recorded and replayed as raw exchanges.
+- Anthropic Messages and OpenAI-compatible chat completions (OpenAI, OpenRouter and others) are
+  understood natively, streaming or not; other APIs are recorded and replayed as raw exchanges.
 
 More in [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 
@@ -191,17 +247,17 @@ More in [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 
 | | |
 |---|---|
-| [Walkthrough](docs/WALKTHROUGH.md) | The example agent, the prompt change and the drift it causes, then a real prompt change and model swap |
+| [Walkthrough](docs/WALKTHROUGH.md) | The example agent, the prompt change and the drift it causes, then a real prompt change and a real model swap |
 | [Concepts](docs/CONCEPTS.md) | Recordings, traces, modes, matching and the Python API |
 | [pytest](docs/PYTEST.md) | The marker, fixture, options and configuration |
 | [Suites](docs/SUITES.md) | Scenarios in one YAML file, run with `replex run` instead of pytest |
-| [Drift](docs/DRIFT.md) | Every policy check, the console and approving changes |
+| [Drift](docs/DRIFT.md) | Every policy check, the model-graded judge, the console and approving changes |
+| [Cost](docs/COST.md) | Prices, the cost of each run and the cost drift check |
 | [Consistency](docs/CONSISTENCY.md) | Run a scenario several times and see how often the agent takes each path |
 | [History](docs/HISTORY.md) | How each scenario's drift checks and decisions evolve over time |
 | [Redaction](docs/REDACTION.md) | Default rules, custom patterns and the check command |
-| [Cost](docs/COST.md) | Prices, the cost of each run and the cost drift check |
-| [Providers](docs/PROVIDERS.md) | Supported APIs, the mock provider and adding your own |
-| [CI](docs/CI.md) | A GitHub Actions workflow for replay and nightly drift checks, and an action that reviews behaviour on pull requests |
+| [Providers](docs/PROVIDERS.md) | Supported APIs, OpenRouter, the mock provider and adding your own |
+| [CI](docs/CI.md) | A GitHub Actions workflow, and an action that reviews behaviour on pull requests |
 | [Limitations](docs/LIMITATIONS.md) | What replay does and doesn't prove |
 | [Decisions](docs/DECISIONS.md) | Design decisions and the reasons for them |
 
@@ -212,16 +268,18 @@ git clone https://github.com/AshishKalidas/replex && cd replex
 make install        # editable install with dev extras
 make test           # full suite with a 90% coverage gate, plus the example's tests
 make lint typecheck
+make e2e            # the console in a real browser (Playwright)
 make demo           # the whole workflow, offline, no key
 make sample         # rebuild the console's bundled sample workspace
 make build          # sdist and wheel in dist/, console included
+make help           # every target
 ```
 
 The console's front end lives in `console-ui/` (React and TypeScript); `make build-console`
-rebuilds the copy that ships inside the package. `make e2e` drives the built console in
-Chromium with Playwright: each test runs a real `replex console` over a temporary copy of the
-cassettes in `console-ui/e2e/fixtures/`, then reviews, accepts and rejects changes the way a
-person would.
+rebuilds the copy that ships inside the package.
+
+A decorated tool called outside a session costs about 70 ns (sync) and 100 ns (async) per
+call on an Apple-silicon laptop (`make bench`; the release gate is 5 µs).
 
 ## Prior art
 

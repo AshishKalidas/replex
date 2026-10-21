@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-10-15T09:42:30Z",
+  "created_at": "2026-10-21T09:44:58Z",
   "events": [
     {
       "duration_ms": 1,
@@ -99,20 +99,20 @@
           "connection": "keep-alive",
           "content-length": "1416",
           "content-type": "application/json",
-          "host": "127.0.0.1:64941",
+          "host": "127.0.0.1:54183",
           "user-agent": "python-httpx/0.28.1",
           "x-api-key": "[REDACTED]"
         },
         "match_key": "sha256:cfa815377f6cde098cbbb1f69245edcd5adc6de3c486e1eca3a11a899366a2e8",
         "method": "POST",
-        "url": "http://127.0.0.1:64941/v1/messages"
+        "url": "http://127.0.0.1:54183/v1/messages"
       },
       "response": {
         "body": null,
         "body_encoding": "json",
         "headers": {
           "content-type": "text/event-stream",
-          "date": "Thu, 15 Oct 2026 09:42:30 GMT",
+          "date": "Wed, 21 Oct 2026 09:44:58 GMT",
           "request-id": "req_mock_0001",
           "server": "BaseHTTP/0.6 Python/3.12.14",
           "x-replex-mock": "true"
@@ -239,7 +239,7 @@
       "type": "tool_call"
     },
     {
-      "duration_ms": 1,
+      "duration_ms": 0,
       "index": 2,
       "request": {
         "body": {
@@ -359,20 +359,20 @@
           "connection": "keep-alive",
           "content-length": "1873",
           "content-type": "application/json",
-          "host": "127.0.0.1:64941",
+          "host": "127.0.0.1:54183",
           "user-agent": "python-httpx/0.28.1",
           "x-api-key": "[REDACTED]"
         },
         "match_key": "sha256:1b62e74e8a6a2e187cb70365db132296a8d94ac6b8de9bcb3f76d813e07abdea",
         "method": "POST",
-        "url": "http://127.0.0.1:64941/v1/messages"
+        "url": "http://127.0.0.1:54183/v1/messages"
       },
       "response": {
         "body": null,
         "body_encoding": "json",
         "headers": {
           "content-type": "text/event-stream",
-          "date": "Thu, 15 Oct 2026 09:42:30 GMT",
+          "date": "Wed, 21 Oct 2026 09:44:58 GMT",
           "request-id": "req_mock_0002",
           "server": "BaseHTTP/0.6 Python/3.12.14",
           "x-replex-mock": "true"
@@ -513,7 +513,7 @@
     }
   ],
   "meta": {
-    "git_sha": "3e7dbd0",
+    "git_sha": "227f8be",
     "model": "mock-sonnet",
     "provider": "mock",
     "tags": []

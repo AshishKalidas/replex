@@ -139,6 +139,8 @@ export interface WorkspaceInfo {
   baselines: number;
   candidates: number;
   writable: boolean;
+  /** The story a bundled sample tells; null for your project. */
+  description: string | null;
 }
 
 export async function listWorkspaces(base = ""): Promise<{ workspaces: WorkspaceInfo[]; default: string }> {

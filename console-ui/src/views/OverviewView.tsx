@@ -49,9 +49,6 @@ function title(list: Scenario[], reports: Map<string, DriftReport>): string {
 const PURPOSE =
   "RepleX keeps a recording of how your agent handles each scenario: every model call and every tool call. After you change a prompt, a model or your code, it runs them again and shows you what the agent now does differently.";
 
-const SAMPLE_STORY =
-  "This sample is a customer-support agent. Its system prompt was reworded to sound friendlier, and RepleX caught that it now skips the refund-policy check before issuing refunds.";
-
 export function HowItWorks() {
   return (
     <section className="how" aria-labelledby="how-title">
@@ -119,8 +116,8 @@ export function OverviewView({
     if (s) window.location.hash = href({ view: "scenario", name: s.name });
   });
 
-  const isSample = workspace?.id === "sample";
-  const eyebrow = workspace ? (isSample ? "Sample workspace · read-only" : "Your project") : source.label;
+  const isSample = workspace !== undefined && !workspace.writable;
+  const eyebrow = workspace ? (isSample ? `${workspace.label} · read-only` : "Your project") : source.label;
 
   if (data.state === "loading") return <Loading what="scenarios" />;
   if (data.state === "error") return <ErrorState error={data.error} />;
@@ -146,13 +143,13 @@ export function OverviewView({
       <PageHead
         eyebrow={eyebrow}
         title={title(list, reports)}
-        lede={isSample ? SAMPLE_STORY : PURPOSE}
+        lede={workspace?.description ?? PURPOSE}
         actions={
           (firstChanged || onTakeTour) && (
             <>
               {firstChanged && (
                 <a className="button" href={href({ view: "scenario", name: firstChanged.name })}>
-                  {isSample ? "See what the prompt change broke" : "Start reviewing"}
+                  {isSample ? "See what changed" : "Start reviewing"}
                 </a>
               )}
               {onTakeTour && (

@@ -93,7 +93,7 @@ describe("consistency panel and data", () => {
     vi.stubGlobal("fetch", fetchMock);
     const source = serverSource({
       id: "project", label: "Your project", baseline_dir: "", candidate_dir: "", policy: null,
-      baselines: 1, candidates: 0, writable: true,
+      baselines: 1, candidates: 0, writable: true, description: null,
     });
     expect((await source.consistency("refund request"))?.runs).toBe(1);
     expect(fetchMock).toHaveBeenCalledWith("/api/w/project/consistency/refund%20request", expect.anything());

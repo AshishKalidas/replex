@@ -210,6 +210,8 @@ class Workspace:
     pricing: Pricing | None = None
     #: The drift history file, ``None`` when history is disabled.
     history_path: Path | None = None
+    #: What the workspace shows, in a sentence or two; bundled samples tell their story here.
+    description: str | None = None
 
     def describe(self) -> dict[str, Any]:
         baselines = list_cassettes(self.baseline_dir)
@@ -223,6 +225,7 @@ class Workspace:
             "baselines": len(baselines),
             "candidates": len(candidates),
             "writable": self.writable,
+            "description": self.description,
         }
 
 
@@ -232,6 +235,20 @@ BUNDLED_SAMPLES: dict[str, tuple[str, Path]] = {
     "sample-models": ("Sample: model swap", Path(__file__).parent / "sample-models"),
 }
 SAMPLE = BUNDLED_SAMPLES["sample"][1]
+
+SAMPLE_DESCRIPTIONS: dict[str, str] = {
+    "sample": (
+        "This sample is a customer-support agent. Its system prompt was reworded to sound "
+        "friendlier, and RepleX caught that it now skips the refund-policy check before "
+        "issuing refunds."
+    ),
+    "sample-models": (
+        "These are real recordings. Claude Sonnet 5.5 handled four support conversations, then "
+        "the same conversations ran on Claude Haiku 5.5, about twenty times cheaper per token. "
+        "The refund flows match; on an order-status question the cheaper model skips the docs "
+        "lookup and leaves out the delivery estimate."
+    ),
+}
 
 
 def sample_workspace(sample_id: str = "sample") -> Workspace:
@@ -249,6 +266,7 @@ def sample_workspace(sample_id: str = "sample") -> Workspace:
         candidate_dir=root / "candidates",
         policy_path=root / "replex.policy.yaml",
         history_path=root / "history.jsonl",
+        description=SAMPLE_DESCRIPTIONS[sample_id],
     )
 
 

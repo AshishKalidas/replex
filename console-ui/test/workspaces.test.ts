@@ -3,7 +3,7 @@ import type { WorkspaceInfo } from "../src/api";
 import { switcherLabel } from "../src/App";
 
 function workspace(id: string, label: string): WorkspaceInfo {
-  return { id, label, baseline_dir: "", candidate_dir: "", policy: null, baselines: 0, candidates: 0, writable: false };
+  return { id, label, baseline_dir: "", candidate_dir: "", policy: null, baselines: 0, candidates: 0, writable: false, description: null };
 }
 
 describe("workspace switcher", () => {

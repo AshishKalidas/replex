@@ -59,7 +59,7 @@ function Decision({ source, name, onDone }: { source: DataSource; name: string; 
   if (!source.writable) {
     controls = (
       <p className="decision-note">
-        {source.workspace === "sample" ? (
+        {source.workspace !== null && source.workspace !== "project" ? (
           "This sample is read-only. In your own project you answer right here: accept the new behaviour, or reject it and fix the change."
         ) : (
           <>

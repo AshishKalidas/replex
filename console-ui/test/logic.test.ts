@@ -132,6 +132,7 @@ describe("data sources", () => {
         baselines: 0,
         candidates: 0,
         writable: false,
+        description: null,
       });
       expect(source.workspace).toBe("sample");
       await source.runs();

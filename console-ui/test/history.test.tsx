@@ -74,7 +74,7 @@ describe("history views", () => {
     try {
       const source = serverSource({
         id: "project", label: "Your project", baseline_dir: "b", candidate_dir: "c", policy: null,
-        baselines: 0, candidates: 0, writable: true,
+        baselines: 0, candidates: 0, writable: true, description: null,
       });
       await source.history();
       await source.history("refund request");

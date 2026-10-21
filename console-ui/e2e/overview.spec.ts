@@ -41,7 +41,8 @@ test.describe("Overview", () => {
     await switcher.getByRole("radio", { name: "Sample" }).click();
     await expect(switcher.getByRole("radio", { name: "Sample" })).toBeChecked();
     await expect(page.locator(".eyebrow")).toHaveText("Sample workspace · read-only");
-    await expect(page.getByRole("link", { name: "See what the prompt change broke" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "See what changed" })).toBeVisible();
+    await expect(page.locator(".lede")).toContainText("customer-support agent");
 
     await page.reload();
     await expect(page.getByRole("radio", { name: "Sample" })).toBeChecked();
@@ -51,6 +52,21 @@ test.describe("Overview", () => {
     await page.reload();
     await expect(page.getByRole("radio", { name: "Project" })).toBeChecked();
     await expect(page.locator(".eyebrow")).toHaveText("Your project");
+  });
+
+  test("a link can open a workspace, and an unknown one falls back to the project", async ({ page }) => {
+    await page.goto("/?workspace=sample-models");
+    await expect(page.getByRole("radio", { name: "Model swap" })).toBeChecked();
+    await expect(page.locator(".eyebrow")).toHaveText("Sample: model swap · read-only");
+    await expect(page.locator(".lede")).toContainText("Claude Sonnet 5.5");
+
+    // Switching moves the address with it, so a reload stays where the visitor is.
+    await page.getByRole("radio", { name: "Project" }).click();
+    await page.reload();
+    await expect(page.getByRole("radio", { name: "Project" })).toBeChecked();
+
+    await page.goto("/?workspace=nowhere");
+    await expect(page.getByRole("radio", { name: "Project" })).toBeChecked();
   });
 
   test("a recording added while the page is open appears when the window regains focus", async ({ page, project }) => {

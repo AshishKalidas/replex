@@ -839,9 +839,13 @@ pre.code-collapsed {
 }
 
 @media (max-width: 734px) {
-  .globalnav-inner { gap: 18px; padding: 0 16px; }
+  .globalnav-inner { gap: 4px 18px; padding: 0 16px 10px; height: auto; flex-wrap: wrap; }
+  .brand { height: 52px; }
   .brand span { display: none; }
   .tabs { gap: 16px; }
+  .globalnav-end { flex: 1 0 100%; margin-left: 0; }
+  .globalnav-end .segmented { width: 100%; }
+  .globalnav-end .segmented button { flex: 1; }
   .content { padding: 0 16px 80px; }
   .footer { padding: 16px; }
   .page-head { padding: 48px 0 32px; }
