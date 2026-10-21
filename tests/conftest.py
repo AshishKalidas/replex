@@ -17,9 +17,11 @@ def _isolate_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "REPLEX_TOOLS",
         "REPLEX_POLICY",
         "REPLEX_CANDIDATE_DIR",
+        "REPLEX_HISTORY",
     ):
         monkeypatch.delenv(var, raising=False)
     monkeypatch.setenv("REPLEX_GIT_SHA", "test000")
+    monkeypatch.setenv("REPLEX_GIT_BRANCH", "main")
 
 
 # ------------------------------------------------------------------ a plain local HTTP server

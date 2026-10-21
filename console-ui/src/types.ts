@@ -190,3 +190,64 @@ export interface ConsistencyReport {
   steps: Spread;
   categorised: boolean;
 }
+
+// Mirrors of replex.history. Keep in sync.
+
+interface HistoryBase {
+  at: string;
+  name: string;
+  git_sha?: string | null;
+  branch?: string | null;
+}
+
+export interface CheckEntry extends HistoryBase {
+  kind: "check";
+  verdict: "passed" | "failed";
+  model: string;
+  baseline_model: string;
+  fail: Record<string, number>;
+  warn: Record<string, number>;
+  tools: string[];
+  steps: number;
+  tokens: number;
+  latency_ms: number;
+}
+
+export interface DecisionEntry extends HistoryBase {
+  kind: "accepted" | "rejected";
+  via: "cli" | "console";
+}
+
+export type HistoryEntry = CheckEntry | DecisionEntry;
+
+export interface ScenarioHistory {
+  name: string;
+  checks: number;
+  passed: number;
+  failed: number;
+  pass_rate: number | null;
+  total_checks: number;
+  last_check_at: string | null;
+  last_change_at: string | null;
+  last_decision: DecisionEntry | null;
+  events: HistoryEntry[];
+}
+
+export interface HistoryTrend {
+  days: number;
+  since: string | null;
+  until: string | null;
+  checks: number;
+  passed: number;
+  failed: number;
+  accepted: number;
+  rejected: number;
+  scenarios: number;
+}
+
+export interface HistoryData {
+  enabled: boolean;
+  limit: number;
+  trend: HistoryTrend;
+  scenarios: ScenarioHistory[];
+}

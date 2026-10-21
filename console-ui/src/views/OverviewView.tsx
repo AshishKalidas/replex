@@ -1,4 +1,5 @@
 import type { DataSource, WorkspaceInfo } from "../api";
+import { HistoryTrendLine } from "../components/History";
 import { EmptyState, ErrorState, Loading, PageHead, Status } from "../components/common";
 import { costChange } from "../cost";
 import { headline, humanize, scenarios, verdictOf, VERDICT_LABEL, VERDICT_TONE, type Scenario } from "../explain";
@@ -170,6 +171,7 @@ export function OverviewView({
           All runs
         </a>
       </div>
+      <HistoryTrendLine source={source} />
       <ul className="scenarios">
         {list.map((s, i) => {
           const report = reports.get(s.name) ?? null;

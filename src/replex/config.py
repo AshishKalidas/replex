@@ -33,7 +33,10 @@ _ENV: dict[str, str] = {
     "REPLEX_MATCH": "match",
     "REPLEX_TOOLS": "tools",
     "REPLEX_POLICY": "policy",
+    "REPLEX_HISTORY": "history",
 }
+
+_HISTORY_OFF = ("", "off", "false", "no", "none")
 
 
 class Config(BaseModel):
@@ -52,6 +55,8 @@ class Config(BaseModel):
     redact_patterns: list[str | dict[str, str]] = Field(default_factory=list)
     redact_paths: list[str] = Field(default_factory=list)
     policy: str = "replex.policy.yaml"
+    #: Drift history file; ``false`` or ``"off"`` disables it (see docs/HISTORY.md).
+    history: str | None = ".replex/history.jsonl"
     strict_unused: bool = True
     prices: dict[str, ModelPrice] = Field(default_factory=dict)
     root: str = "."
@@ -60,6 +65,15 @@ class Config(BaseModel):
     @classmethod
     def _lower(cls, v: Any) -> Any:
         return v.strip().lower() if isinstance(v, str) else v
+
+    @field_validator("history", mode="before")
+    @classmethod
+    def _history_switch(cls, v: Any) -> Any:
+        if v is True:
+            return cls.model_fields["history"].default
+        if v is False or (isinstance(v, str) and v.strip().lower() in _HISTORY_OFF):
+            return None
+        return v
 
     def path(self, value: str) -> Path:
         """Resolve a configured path against the project root."""
@@ -80,6 +94,11 @@ class Config(BaseModel):
     def policy_path(self) -> Path:
         """Absolute path of the drift policy file."""
         return self.path(self.policy)
+
+    @property
+    def history_path(self) -> Path | None:
+        """Absolute path of the drift history file, ``None`` when history is disabled."""
+        return self.path(self.history) if self.history is not None else None
 
     def merged(self, **overrides: Any) -> Config:
         """A copy with non-``None`` overrides applied and validated."""

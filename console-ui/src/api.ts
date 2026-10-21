@@ -3,6 +3,7 @@ import type {
   CompareResult,
   ConsistencyReport,
   DriftResult,
+  HistoryData,
   ReportPayload,
   RunSummary,
   Trace,
@@ -28,7 +29,17 @@ export interface DataSource {
   accept(name: string): Promise<void>;
   /** Throw away the latest run of a scenario and keep the baseline. */
   discard(name: string): Promise<void>;
+  /** Past drift checks and decisions, for every scenario or only `name`. */
+  history(name?: string): Promise<HistoryData>;
 }
+
+/** What a source without a history file (a static report) answers. */
+export const NO_HISTORY: HistoryData = {
+  enabled: false,
+  limit: 0,
+  trend: { days: 7, since: null, until: null, checks: 0, passed: 0, failed: 0, accepted: 0, rejected: 0, scenarios: 0 },
+  scenarios: [],
+};
 
 export function splitRunId(id: string): { kind: string; name: string } {
   const at = id.indexOf(":");
@@ -75,6 +86,7 @@ export function staticSource(payload: ReportPayload): DataSource {
     consistency: () => Promise.resolve(null),
     accept: () => missing("accepting changes"),
     discard: () => missing("discarding changes"),
+    history: () => Promise.resolve(NO_HISTORY),
     async runs() {
       const rows: RunSummary[] = [];
       for (const pair of payload.pairs) {
@@ -167,6 +179,10 @@ export function serverSource(workspace: WorkspaceInfo, base = ""): DataSource {
     },
     async discard(name) {
       await getJson(`${api}/scenarios/${encodeURIComponent(name)}/discard`, POST);
+    },
+    history(name) {
+      const q = name === undefined ? "" : `?${new URLSearchParams({ name }).toString()}`;
+      return getJson<HistoryData>(`${api}/history${q}`);
     },
   };
 }

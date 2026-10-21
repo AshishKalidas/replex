@@ -36,6 +36,9 @@ from replex.consistency import analyse_runs, list_runs
 from replex.drift.compare import DriftReport, compare
 from replex.drift.policy import Policy, load_policy
 from replex.errors import RecordingRefused, ReplexError
+from replex.history import read as read_history
+from replex.history import record_decision
+from replex.history import summary as history_summary
 from replex.pricing import Pricing
 from replex.providers import build_trace
 from replex.trace.model import Trace
@@ -205,6 +208,8 @@ class Workspace:
     writable: bool = False
     #: Prices used for costs; the built-in table when ``None``.
     pricing: Pricing | None = None
+    #: The drift history file, ``None`` when history is disabled.
+    history_path: Path | None = None
 
     def describe(self) -> dict[str, Any]:
         baselines = list_cassettes(self.baseline_dir)
@@ -243,6 +248,7 @@ def sample_workspace(sample_id: str = "sample") -> Workspace:
         baseline_dir=root / "cassettes",
         candidate_dir=root / "candidates",
         policy_path=root / "replex.policy.yaml",
+        history_path=root / "history.jsonl",
     )
 
 
@@ -255,6 +261,7 @@ def project_workspace(
     baseline_dir: Path,
     candidate_dir: Path,
     policy_path: Path | None = None,
+    history_path: Path | None = None,
     *,
     pricing: Pricing | None = None,
 ) -> Workspace:
@@ -266,6 +273,7 @@ def project_workspace(
         candidate_dir=Path(candidate_dir),
         policy_path=policy_path,
         writable=True,
+        history_path=history_path,
         pricing=pricing,
     )
 
@@ -404,13 +412,28 @@ def create_app(
             written = promote_candidate(store.candidate_dir, store.baseline_dir, name)
         except ReplexError as exc:
             raise HTTPException(422, str(exc)) from exc
+        record_decision(
+            by_id[ws].history_path, "accepted", name, via="console", root=store.baseline_dir
+        )
         return {"accepted": name, "baseline": str(written)}
 
     @app.post("/api/w/{ws}/scenarios/{name}/discard")
     def discard(ws: str, name: str, request: Request) -> dict[str, Any]:
         store = writable_store(ws, request)
         store.path("candidate", name).unlink()
+        record_decision(
+            by_id[ws].history_path, "rejected", name, via="console", root=store.baseline_dir
+        )
         return {"discarded": name}
+
+    @app.get("/api/w/{ws}/history")
+    def history(
+        ws: str, name: str | None = None, limit: int = Query(20, ge=1, le=500)
+    ) -> dict[str, Any]:
+        store_for(ws)
+        path = by_id[ws].history_path
+        data = history_summary(read_history(path), name=name, limit=limit)
+        return {"enabled": path is not None, **data.model_dump(mode="json")}
 
     @app.exception_handler(HTTPException)
     async def http_error(_request: Any, exc: HTTPException) -> JSONResponse:

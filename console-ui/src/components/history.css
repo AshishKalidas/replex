@@ -1,0 +1,53 @@
+/* Drift history: the scenario timeline and the overview trend line. */
+
+.history { display: flex; flex-direction: column; gap: 16px; }
+.history-summary { font-size: 17px; line-height: 1.47; }
+
+.history-svg { display: block; width: 100%; max-width: 720px; height: auto; overflow: visible; }
+.history-axis { stroke: var(--hairline); stroke-width: 1; }
+.history-date { fill: var(--text-2); font-family: var(--font-sans); font-size: 12px; }
+
+.history-mark circle,
+.history-mark polygon,
+.history-mark rect { stroke-width: 1.5; }
+.history-passed { fill: var(--ok-dot); stroke: var(--ok-dot); }
+.history-changed { fill: var(--fail-dot); stroke: var(--fail-dot); }
+.history-accepted { fill: var(--accent); stroke: var(--accent); }
+.history-rejected { fill: var(--page); stroke: var(--text-2); }
+
+.history-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-2);
+  font-size: 13px;
+}
+.history-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.history-legend svg { width: 14px; height: 14px; }
+
+.history-list { margin: 8px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--hairline-soft); }
+.history-list li {
+  display: grid;
+  grid-template-columns: 180px 170px 1fr;
+  gap: 4px 24px;
+  align-items: baseline;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--hairline-soft);
+  font-size: 14px;
+}
+.history-list time { color: var(--text-2); font-variant-numeric: tabular-nums; }
+.history-detail { color: var(--text-2); overflow-wrap: anywhere; }
+.history-tag { font-weight: 600; }
+.history-tag-passed { color: var(--ok); }
+.history-tag-changed { color: var(--fail); }
+.history-tag-accepted { color: var(--link); }
+.history-tag-rejected { color: var(--text); }
+
+.history-trend { color: var(--text-2); font-size: 15px; margin: -8px 0 20px; }
+
+@media (max-width: 734px) {
+  .history-list li { grid-template-columns: 1fr; }
+}

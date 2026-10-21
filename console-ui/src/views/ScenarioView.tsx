@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import type { DataSource } from "../api";
 import { Collapsible, DiffText, EmptyState, ErrorState, Loading, PageHead, Status, ToolChips } from "../components/common";
+import { HistorySection } from "../components/History";
 import { explain, humanize, verdictOf, VERDICT_LABEL, VERDICT_TONE } from "../explain";
 import { actions, compareActions, customerMessage, reply, type Action } from "../story";
 import { formatCost } from "../cost";
@@ -326,6 +327,7 @@ export function ScenarioView({ source, name }: { source: DataSource; name: strin
           page will show whether the agent still does the same thing.
         </p>
         <Consistency source={source} name={name} />
+        <HistorySection source={source} name={name} revision={revision} />
       </section>
     );
   }
@@ -386,6 +388,7 @@ export function ScenarioView({ source, name }: { source: DataSource; name: strin
       )}
 
       <Consistency source={source} name={name} />
+      <HistorySection source={source} name={name} revision={revision} />
 
       <div className="details-divider">
         <h2>The details</h2>

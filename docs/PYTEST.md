@@ -93,6 +93,7 @@ ignore_request_fields = ["metadata.request_id"]
 redact_patterns = []                      # see docs/REDACTION.md
 redact_paths = []
 policy = "replex.policy.yaml"
+history = ".replex/history.jsonl"         # false turns drift history off (docs/HISTORY.md)
 strict_unused = true
 prices = {}                               # $ per million tokens; see docs/COST.md
 ```
@@ -105,8 +106,10 @@ prices = {}                               # $ per million tokens; see docs/COST.
 | `REPLEX_MATCH` | `match` |
 | `REPLEX_TOOLS` | `tools` |
 | `REPLEX_POLICY` | `policy` |
+| `REPLEX_HISTORY` | `history` (`off` disables it) |
 | `REPLEX_ALLOW_RECORD_IN_CI` | `1` lets `record` / `rewrite` run when `CI` is set |
-| `REPLEX_GIT_SHA` | Overrides the git sha stored in `meta.git_sha` (empty string: none) |
+| `REPLEX_GIT_SHA` | Overrides the git sha stored in `meta.git_sha` and the drift history (empty string: none) |
+| `REPLEX_GIT_BRANCH` | Overrides the branch stored in the drift history (empty string: none) |
 
 Unknown keys and invalid values are rejected with a `ConfigError` naming the field. To load the
 same configuration outside pytest: `replex.load_config()`.

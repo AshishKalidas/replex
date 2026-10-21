@@ -55,6 +55,18 @@ Design choices worth knowing about, one line each: decision, reason.
 - **The action keeps one comment per project, found by a hidden marker naming its working directory, and edits it in place.** Re-runs should not bury a pull request in comments.
 - **The compact Markdown summary truncates by dropping whole rows and blocks, never mid-table.** A cut-off table or an unclosed `<details>` renders worse than a shorter comment.
 
+## Drift history
+
+- **Every completed drift comparison appends one JSON line to `.replex/history.jsonl`; crashed runs and other modes append nothing.** A candidate is overwritten on every check, so without a log there is no memory of how behaviour evolved.
+- **History lines keep check names and counts, never finding messages, arguments or outputs.** Messages quote tool arguments and answers; names and numbers cannot carry a secret, so the file needs no redaction pass.
+- **Appends take an exclusive `flock` (`msvcrt.locking` on Windows) on a sibling `.lock` file, held across the size check, rotation and write.** `O_APPEND` alone keeps lines intact on local disks but not on network filesystems, and rotation needs mutual exclusion anyway; xdist workers are separate processes, so a thread lock would not do.
+- **The file rotates to `history.jsonl.1` at 1 MB, and only that one previous generation is kept.** History stays bounded (at most about 2 MB, several thousand checks) with no clean-up step to remember.
+- **Readers skip lines that do not parse.** A write cut short by a crash, or a line from a newer version, must not hide the rest of the history.
+- **A history file that cannot be written raises a warning, never an error.** History records a check; it must not change the check's result.
+- **`replex approve` and the console's Accept and Reject append decision lines.** The timeline then shows not only when behaviour changed but what the reviewer decided.
+- **The console's weekly trend covers the seven days up to the newest entry, not up to today.** The bundled sample's history still reads sensibly long after it was generated.
+- **The timeline spaces events evenly instead of by time.** Checks come in bursts minutes apart and then nothing for days; the order is what a reviewer reads.
+
 ## Console and report
 
 - **The built console is committed under `src/replex/console/static/`, and CI checks it matches the source.** `pip install` and the wheel then need no Node toolchain.

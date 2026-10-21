@@ -61,6 +61,7 @@ sample: ## Rebuild the console's bundled sample workspace from the example (offl
 	cp $(EXAMPLE)/.replex/candidates/*.replex.json $(SAMPLE)/candidates/
 	cp $(EXAMPLE)/replex.policy.yaml $(SAMPLE)/
 	cp $(EXAMPLE)/schemas/refund.json $(SAMPLE)/schemas/
+	cd $(EXAMPLE) && $(PY) sample_history.py ../../$(SAMPLE)/history.jsonl
 
 sample-models: ## Rebuild the console's model-swap sample from the committed real recordings (offline)
 	rm -rf $(SAMPLE_MODELS) && mkdir -p $(SAMPLE_MODELS)/cassettes $(SAMPLE_MODELS)/candidates $(SAMPLE_MODELS)/schemas

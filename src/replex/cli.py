@@ -534,10 +534,46 @@ def approve_cmd(name: str, as_json: bool) -> None:
     cfg = _config()
     check_ci_guard("rewrite")
     dst = promote_candidate(cfg.candidate_path, cfg.cassette_path, name)
+    from replex.history import record_decision
+
+    record_decision(cfg.history_path, "accepted", name, via="cli", root=cfg.root)
     if as_json:
         _emit_json({"approved": name, "baseline": str(dst)})
     else:
         click.echo(f"approved {name}: {dst} now holds the new baseline (commit it)")
+
+
+# --------------------------------------------------------------------------- history
+
+
+@cli.command("history")
+@click.argument("name", required=False)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@click.option(
+    "--limit",
+    default=20,
+    show_default=True,
+    type=click.IntRange(min=1),
+    help="how many recent checks per scenario to show",
+)
+@_errors
+def history_cmd(name: str | None, as_json: bool, limit: int) -> None:
+    """Show how each scenario's drift checks went over time, and what was accepted."""
+    from replex.history import read, render_history, summary
+
+    path = _config().history_path
+    if path is None:
+        raise click.ClickException("drift history is disabled ([tool.replex] history)")
+    data = summary(read(path), name=name, limit=limit)
+    if as_json:
+        _emit_json(data.model_dump(mode="json"))
+        return
+    if not data.scenarios:
+        click.echo(
+            f"no drift checks recorded for {name}" if name else f"no drift history at {path}"
+        )
+        return
+    render_history(data, _console(), detailed=name is not None)
 
 
 # --------------------------------------------------------------------------- console
@@ -603,6 +639,7 @@ def console_cmd(
                 directory or cfg.cassette_path,
                 candidate_dir or cfg.candidate_path,
                 Path(policy_path) if policy_path else cfg.policy_path,
+                cfg.history_path,
                 pricing=Pricing.from_config(cfg),
             )
         )

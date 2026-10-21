@@ -246,6 +246,9 @@ class Session:
                 name=self.name,
             )
             self.outcome = "drift_passed" if self.drift_report.passed else "drift_failed"
+            from replex.history import record_check
+
+            record_check(self.config, self.drift_report, git_sha=cassette.meta.git_sha)
             return
         if mode == "rewrite" and exc is not None:
             self.outcome = "error"
